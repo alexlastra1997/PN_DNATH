@@ -11,12 +11,24 @@ use App\Exports\UsuariosExport;
 use Maatwebsite\Excel\Facades\Excel;
 use Barryvdh\DomPDF\Facade\Pdf;
 use App\Exports\UusuariosExport;
+use Illuminate\Support\Facades\DB;
+
 
 
 class UsuarioController extends Controller
 {
     public function index(Request $request)
     {
+
+        $cantidadCedulasUnicas = DB::table('usuarios')
+        ->whereNotNull('cedula')
+        ->distinct()
+        ->count('cedula');
+
+        $cuadroClases = Usuario::where('cuadro_policial', 'Clases y Policías')->count();
+        $cuadroSubalternos = Usuario::where('cuadro_policial', 'Oficiales Subalternos')->count();
+        $cuadroSuperiores = Usuario::where('cuadro_policial', 'Oficiales Superiores')->count();
+
         $query = Usuario::query();
 
         // Filtro por cédula
@@ -35,9 +47,15 @@ class UsuarioController extends Controller
         }
 
         // Paginar resultados
-        $usuarios = $query->paginate(10);
+        $usuarios = $query->paginate(100);
 
-        return view('usuarios.index', compact('usuarios'));
+        return view('usuarios.index', compact(
+            'usuarios',
+            'cantidadCedulasUnicas',
+            'cuadroClases',
+            'cuadroSubalternos',
+            'cuadroSuperiores'
+        ));
     }
 
     // Método para exportar a PDF
