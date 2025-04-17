@@ -1,6 +1,3 @@
-@extends('layouts.app')
-
-@section('main')
 
     <nav class="bg-white border-b border-gray-200 px-4 py-2.5 dark:bg-gray-800 dark:border-gray-700 fixed left-0 right-0 top-0 z-50">
         <div class="flex flex-wrap justify-between items-center">
@@ -723,16 +720,14 @@
                 aria-labelledby="dropdown"
                 >
                 <li>
-                    <a
-                    href="#"
-                    class="block py-2 px-4 text-sm hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white"
-                    >Sign out</a
-                    >
+                    <form action="{{ route('logout') }}" method="POST">
+                    @csrf
+                    
+                    <button type="submit" class="block py-2 px-4 text-sm  dark:hover:bg-gray-600 dark:hover:text-white">Cerrar sesión</button>
+                    </form>
                 </li>
                 </ul>
             </div>
             </div>
         </div>
     </nav>
-
-@endsection
