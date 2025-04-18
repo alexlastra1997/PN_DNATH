@@ -25,6 +25,7 @@ Route::post('/register', [RegisterController::class, 'register']);
 // Rutas protegidas con auth
 Route::middleware('auth')->group(function () {
     Route::get('/usuarios', [UsuarioController::class, 'index'])->name('usuarios.index');
+    Route::get('/usuarios/{usuario}', [UsuarioController::class, 'show'])->name('usuarios.show');
     Route::get('/usuarios/export-excel', [UsuarioController::class, 'exportExcel'])->name('usuarios.exportExcel');
     Route::get('/usuarios/export-pdf', [UsuarioController::class, 'exportPDF'])->name('usuarios.exportPDF');
     

@@ -153,7 +153,10 @@
                             {{ $usuario->tipo_personal }}
                             </div>
                         </td>
-                        <td class="px-4 py-2 font-medium text-gray-900 whitespace-nowrap dark:text-white">Just now</td>
+                        <td class="px-4 py-2 font-medium text-gray-900 whitespace-nowrap dark:text-white"><a href="{{ route('usuarios.show', $usuario->id) }}"
+                            class="inline-block bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm shadow">
+                            Ver Detalles
+                         </a></td>
                     </tr>  
                 @endforeach
                   </tbody>

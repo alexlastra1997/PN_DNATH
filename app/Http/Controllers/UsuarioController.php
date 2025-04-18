@@ -58,6 +58,11 @@ class UsuarioController extends Controller
         ));
     }
 
+    public function show(Usuario $usuario)
+    {
+        return view('usuarios.show', compact('usuario'));
+    }
+
     // Método para exportar a PDF
     public function exportPDF(Request $request)
     {
