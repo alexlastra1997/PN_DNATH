@@ -2,39 +2,33 @@
 
 namespace App\Exports;
 
-use App\Models\Usuario;
 use Maatwebsite\Excel\Concerns\FromCollection;
-use Maatwebsite\Excel\Concerns\FromQuery;
-use Maatwebsite\Excel\Concerns\Exportable;
+use Illuminate\Support\Collection;
+use Maatwebsite\Excel\Concerns\WithHeadings;
 
-
-class UsuariosExport implements FromCollection
+class UsuariosExport implements FromCollection, WithHeadings
 {
-    protected $request;
+    protected $usuarios;
 
-    public function __construct($request)
+    public function __construct($usuarios)
     {
-        $this->request = $request;
+        $this->usuarios = $usuarios;
     }
 
     public function collection()
     {
-        $query = Usuario::query();
+        return $this->usuarios->map(function ($usuario) {
+            return [
+                'cedula' => $usuario->cedula,
+                'nombre' => $usuario->apellidos_nombres,
+                'sexo' => $usuario->sexo,
+                'hijos18' => $usuario->hijos18,
+            ];
+        });
+    }
 
-        if ($this->request->filled('search')) {
-            $query->where('cedula', 'like', '%' . $this->request->search . '%');
-        }
-
-        if ($this->request->filled('sexo')) {
-            $query->whereIn('sexo', $this->request->sexo);
-        }
-
-        if ($this->request->filled('hijos18')) {
-            $query->whereIn('hijos18', $this->request->hijos);
-        }
-
-        return $query->limit(5000)->get();
-
+    public function headings(): array
+    {
+        return ['Cédula', 'Nombre', 'Sexo', 'Hijos < 18'];
     }
 }
-

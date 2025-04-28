@@ -11,7 +11,7 @@ class RegisterController extends Controller
 {
     public function showRegistrationForm()
     {
-        return view('auth.register'); // tu vista de formulario
+        return view('auth.register');
     }
 
     public function register(Request $request)
@@ -22,7 +22,6 @@ class RegisterController extends Controller
             'password' => 'required|string|min:8|confirmed',
         ]);
 
-        // Crear el usuario
         User::create([
             'name'     => $request->name,
             'email'    => $request->email,

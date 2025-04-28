@@ -9,30 +9,25 @@ use Illuminate\Support\Facades\Redirect;
 
 class LoginController extends Controller
 {
-    // Muestra el formulario de login
     public function showLoginForm()
     {
         return view('auth.login');
     }
 
-    // Maneja el login del usuario
     public function login(Request $request)
     {
-        // Validación de las credenciales
-        $request->validate([
-            'email' => 'required|email',
-            'password' => 'required|min:6',
+        $credentials = $request->validate([
+            'email'    => ['required', 'email'],
+            'password' => ['required'],
         ]);
 
-        // Intentamos autenticar al usuario con los datos proporcionados
-        if (Auth::attempt(['email' => $request->email, 'password' => $request->password], $request->remember)) {
-            // Redirige al usuario a la página que intentaba acceder originalmente
-            return redirect()->intended('/');
+        if (Auth::attempt($credentials)) {
+            $request->session()->regenerate();
+            return redirect()->intended('/dashboard'); // Redirige a la ruta deseada después de iniciar sesión
         }
 
-        // Si la autenticación falla, redirige de nuevo con un mensaje de error
         return back()->withErrors([
-            'email' => 'Las credenciales proporcionadas son incorrectas.',
+            'email' => 'Credenciales incorrectas.',
         ]);
     }
 
