@@ -120,9 +120,9 @@ class UsuarioController extends Controller
         // Provincias para histórico
         $provincias_ecuador = [
             'AZUAY', 'BOLIVAR', 'CAÑAR', 'CARCHI', 'CHIMBORAZO', 'COTOPAXI', 'EL ORO',
-            'ESMERALDAS', 'GALÁPAGOS', 'GUAYAS', 'IMBABURA', 'LOJA', 'LOS RÍOS', 'MANABÍ',
+            'ESMERALDAS', 'GALAPAGOS', 'GUAYAS', 'IMBABURA', 'LOJA', 'LOS RIOS', 'MANABI',
             'MORONA SANTIAGO', 'NAPO', 'ORELLANA', 'PASTAZA', 'PICHINCHA', 'SANTA ELENA',
-            'SANTO DOMINGO DE LOS TSÁCHILAS', 'SUCUMBÍOS', 'TUNGURAHUA', 'ZAMORA CHINCHIPE'
+            'STO DOMINGO TSACHILAS', 'SUCUMBIOS', 'TUNGURAHUA', 'ZAMORA CHINCHIPE'
         ];
 
         $historico = DB::table('usuarios')->pluck('historico_pases')->toArray();
