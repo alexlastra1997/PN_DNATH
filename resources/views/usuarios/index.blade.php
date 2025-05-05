@@ -79,10 +79,10 @@
                         
                                     
                                     <div>
-                                        <label class="block text-sm font-medium text-gray-700 mb-1">Grado</label>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Grado</label>
                                         <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-2 max-h-64 overflow-y-auto p-2 border border-gray-300 rounded-md">
                                             @foreach($grado as $g)
-                                                <label class="flex items-center space-x-2 text-sm text-gray-700">
+                                                <label class="flex items-center space-x-2 text-sm text-gray-700 dark:text-gray-200">
                                                     <input type="checkbox" name="grado[]" value="{{ $g }}" 
                                                         {{ is_array(request('grado')) && in_array($g, request('grado')) ? 'checked' : '' }}
                                                         class="text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
@@ -94,7 +94,7 @@
                         
                                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
                                         <div>
-                                            <label for="sexo" class="block text-sm font-medium text-gray-700">Sexo</label>
+                                            <label for="sexo" class="block text-sm font-medium text-gray-700 dark:text-gray-200">Sexo</label>
                                             <select name="sexo" id="sexo" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500">>
                                                 <option value="">-- Todos --</option>
                                                 @foreach($sexo as $sexo_selected)
@@ -106,7 +106,7 @@
                                         </div>
                                         
                                         <div>
-                                            <label for="hijos18" class="block text-sm font-medium text-gray-700">Número de hijos</label>
+                                            <label for="hijos18" class="block text-sm font-medium text-gray-700 dark:text-gray-200">Número de hijos</label>
                                             <select name="hijos18" id="hijos18" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500">>
                                                 <option value="">-- Todos --</option>
                                                 @foreach($hijos18 as $hijos)
@@ -118,7 +118,7 @@
                                         </div>
                         
                                         <div>
-                                            <label for="tipo_personal" class="block text-sm font-medium text-gray-700">Tipo de Personal</label>
+                                            <label for="tipo_personal" class="block text-sm font-medium text-gray-700 dark:text-gray-200">Tipo de Personal</label>
                                             <select name="tipo_personal" id="tipo_personal" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500">>
                                                 <option value="">-- Todos --</option>
                                                 <option value="A" {{ request('tipo_personal') == 'L' ? 'selected' : '' }}>Administrativo (A)</option>
@@ -133,7 +133,7 @@
                                         </div>
                         
                                         <div>
-                                            <label for="estado_civil" class="block text-sm font-medium text-gray-700">Estado Civil</label>
+                                            <label for="estado_civil" class="block text-sm font-medium text-gray-700 dark:text-gray-200">Estado Civil</label>
                                             <select name="estado_civil" id="estado_civil" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500">>
                                                 <option value="">-- Todos --</option>
                                                 @foreach($estado_civil as $estado)
@@ -145,7 +145,7 @@
                                         </div>
                         
                                         <div>
-                                            <label for="unidad" class="block text-sm font-medium text-gray-700">Unidad</label>
+                                            <label for="unidad" class="block text-sm font-medium text-gray-700 dark:text-gray-200">Unidad</label>
                                             <select name="unidad" id="unidad" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500">>
                                                 <option value="">-- Todos --</option>
                                                 @foreach($unidad as $uni)
@@ -157,7 +157,7 @@
                                         </div>
                         
                                         <div>
-                                            <label for="cuadro_policial" class="block text-sm font-medium text-gray-700">Cuadro Policial</label>
+                                            <label for="cuadro_policial" class="block text-sm font-medium text-gray-700 dark:text-gray-200">Cuadro Policial</label>
                                             <select name="cuadro_policial" id="cuadro_policial" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500">>
                                                 <option value="">-- Todos --</option>
                                                 @foreach($cuadro_policial as $cuadro)
@@ -169,7 +169,7 @@
                                         </div>
                         
                                         <div>
-                                            <label for="cdg_promocion" class="block text-sm font-medium text-gray-700">Promoción</label>
+                                            <label for="cdg_promocion" class="block text-sm font-medium text-gray-700 dark:text-gray-200">Promoción</label>
                                             <select name="cdg_promocion" id="cdg_promocion" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500">>
                                                 <option value="">-- Todos --</option>
                                                 @foreach($cdg_promocion as $promo)
@@ -182,7 +182,7 @@
 
                         
                                         <div>
-                                            <label for="provincia_trabaja" class="block text-sm font-medium text-gray-700">Provincia en la que trabaja</label>
+                                            <label for="provincia_trabaja" class="block text-sm font-medium text-gray-700 dark:text-gray-200">Provincia en la que trabaja</label>
                                             <select name="provincia_trabaja" id="provincia_trabaja" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500">>
                                                 <option value="">-- Todos --</option>
                                                 @foreach($provincia_trabaja as $tra)
@@ -194,7 +194,7 @@
                                         </div>
                         
                                         <div>
-                                            <label for="provincia_vive" class="block text-sm font-medium text-gray-700">Provincia en la que vive</label>
+                                            <label for="provincia_vive" class="block text-sm font-medium text-gray-700 dark:text-gray-200">Provincia en la que vive</label>
                                             <select name="provincia_vive" id="provincia_vive" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500">>
                                                 <option value="">-- Todos --</option>
                                                 @foreach($provincia_vive as $vive)
@@ -206,7 +206,7 @@
                                         </div>
 
                                         <div>
-                                            <label for="provincia" class="block text-sm font-medium text-gray-700">Provincia en histórico</label>
+                                            <label for="provincia" class="block text-sm font-medium text-gray-700 dark:text-gray-200">Provincia en histórico</label>
                                             <select name="provincia" id="provincia" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500">
                                                 <option value="">-- Todas --</option>
                                                 @foreach($provinciasFiltradas as $provincia)
@@ -218,7 +218,7 @@
                                         </div>
 
                                         <div>
-                                            <label for="alertas" class="block text-sm font-medium text-gray-700">Alertas</label>
+                                            <label for="alertas" class="block text-sm font-medium text-gray-700 dark:text-gray-200">Alertas</label>
                                             <select name="alertas" id="alertas" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500">
                                                 <option value="">-- Selecciona --</option>
                                                 <option value="si" {{ request('alertas') == 'si' ? 'selected' : '' }}>Sí</option>
@@ -228,7 +228,7 @@
                                     
                                         <!-- Filtro CONTRATO ESTUDIOS -->
                                         <div>
-                                            <label for="contrato_estudios" class="block text-sm font-medium text-gray-700">Contrato Estudios</label>
+                                            <label for="contrato_estudios" class="block text-sm font-medium text-gray-700 dark:text-gray-200">Contrato Estudios</label>
                                             <select name="contrato_estudios" id="contrato_estudios" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500">
                                                 <option value="">-- Selecciona --</option>
                                                 <option value="si" {{ request('contrato_estudios') == 'si' ? 'selected' : '' }}>Sí</option>
@@ -238,7 +238,7 @@
                                         
                         
                                         <div>
-                                            <label for="fecha_ingreso" class="block text-sm font-medium text-gray-700">Fecha de ingreso (rango)</label>
+                                            <label for="fecha_ingreso" class="block text-sm font-medium text-gray-700 dark:text-gray-200">Fecha de ingreso (rango)</label>
                                             <input type="text" name="fecha_ingreso" id="fecha_ingreso"
                                                 value="{{ request('fecha_ingreso') }}"
                                                 class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm text-black"
@@ -258,7 +258,7 @@
                                             });
                                         </script>
                                         <div>
-                                            <label for="fecha_pase_anterior" class="block text-sm font-medium text-gray-700">Fecha del pase anterior</label>
+                                            <label for="fecha_pase_anterior" class="block text-sm font-medium text-gray-700 dark:text-gray-200">Fecha del pase anterior</label>
                                             <input type="text" name="fecha_pase_anterior" id="fecha_pase_anterior"
                                                 value="{{ request('fecha_pase_anterior') }}"
                                                 class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm text-black"
@@ -278,7 +278,7 @@
                                         </script>
                         
                                         <div>
-                                            <label for="fecha_pase_actual" class="block text-sm font-medium text-gray-700">Fecha del pase actual</label>
+                                            <label for="fecha_pase_actual" class="block text-sm font-medium text-gray-700 dark:text-gray-200">Fecha del pase actual</label>
                                             <input type="text" name="fecha_pase_actual" id="fecha_pase_actual"
                                                 value="{{ request('fecha_pase_actual') }}"
                                                 class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm text-black"
@@ -407,5 +407,5 @@
             </div>
         </div>
     </section>
-
+    
 @endsection
