@@ -395,7 +395,7 @@ $meritosContados = array_count_values($meritos);
                     {{ !empty($usuario->discapacidad_padres) ? $usuario->discapacidad_padres : 'No tiene información sobre discapacidad (Padres).' }}
                 </td>
                 <td class="px-4 py-2">
-                    {{ !empty($usuario->hijos18) ? $usuario->hijos18 : 'No tiene información sobre hijos menores de 18 años.' }}
+                    {{ !empty($usuario->hijos_menor_igual_18) ? $usuario->hijos_menor_igual_18 : 'No tiene información sobre hijos menores de 18 años.' }}
                 </td>
             </tr>
         </tbody>

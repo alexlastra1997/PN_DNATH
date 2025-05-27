@@ -12,7 +12,7 @@ class CreateServidorPolicialsTable extends Migration
             $table->id();
             $table->string('cedula');
             $table->string('apellidos_nombres');
-            $table->integer('hijos18')->nullable();  // Cambia el tipo de dato según tu estructura
+            $table->integer('hijos_menor_igual_18')->nullable();  // Cambia el tipo de dato según tu estructura
             // Agrega más campos según sea necesario
             $table->timestamps();
         });

@@ -10,12 +10,12 @@ class ServidorPolicialController extends Controller
 {
     public function index(Request $request)
     {
-        // Obtén el filtro 'hijos18' si está presente en la solicitud
-        $hijos = $request->input('hijos18');
+        // Obtén el filtro 'hijos_menor_igual_18' si está presente en la solicitud
+        $hijos = $request->input('hijos_menor_igual_18');
 
-        // Aplica el filtro en la consulta si 'hijos18' está presente
+        // Aplica el filtro en la consulta si 'hijos_menor_igual_18' está presente
         $servidores = ServidorPolicial::when($hijos, function($query) use ($hijos) {
-            return $query->where('hijos18', $hijos);
+            return $query->where('hijos_menor_igual_18', $hijos);
         })->get(); // Trae los registros filtrados
 
         // Pasa los servidores a la vista

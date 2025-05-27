@@ -59,8 +59,8 @@ class UsuarioController extends Controller
             $query->where('sexo', $request->sexo);
         }
 
-        if ($request->filled('hijos18')) {
-            $query->where('hijos18', $request->hijos18);
+        if ($request->filled('hijos_menor_igual_18')) {
+            $query->where('hijos_menor_igual_18', $request->hijos_menor_igual_18);
         }
 
         if ($request->filled('tipo_personal')) {
@@ -147,7 +147,7 @@ class UsuarioController extends Controller
 
         // Listas desplegables
         $sexo = Usuario::select('sexo')->distinct()->pluck('sexo');
-        $hijos18 = Usuario::select('hijos18')->distinct()->pluck('hijos18');
+        $hijos_menor_igual_18 = Usuario::select('hijos_menor_igual_18')->distinct()->pluck('hijos_menor_igual_18');
         $estado_civil = Usuario::select('estado_civil')->distinct()->whereNotNull('estado_civil')->orderBy('estado_civil')->pluck('estado_civil');
         $unidad = Usuario::select('unidad')->distinct()->whereNotNull('unidad')->orderBy('unidad')->pluck('unidad');
         $cdg_promocion = Usuario::select('cdg_promocion')->distinct()->whereNotNull('cdg_promocion')->orderBy('cdg_promocion')->pluck('cdg_promocion');
@@ -167,7 +167,7 @@ class UsuarioController extends Controller
             'provincia_vive',
             'cuadro_policial',
             'grado',
-            'hijos18',
+            'hijos_menor_igual_18',
             'sexo',
             'provinciasFiltradas',
             'request'
@@ -238,8 +238,8 @@ class UsuarioController extends Controller
             $query->where('sexo', $request->sexo);
         }
 
-        if ($request->filled('hijos18')) {
-            $query->where('hijos18', $request->hijos18);
+        if ($request->filled('hijos_menor_igual_18')) {
+            $query->where('hijos_menor_igual_18', $request->hijos_menor_igual_18);
         }
 
         if ($request->filled('tipo_personal')) {
@@ -322,4 +322,6 @@ class UsuarioController extends Controller
     
         abort(404);
     }
+
+   
 }

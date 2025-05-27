@@ -9,6 +9,6 @@ class ServidorPolicial extends Model
     protected $table = 'servidor_policials';  // Asegúrate de que coincida con el nombre de la tabla en la base de datos
     
     protected $fillable = [
-        'cedula', 'apellidos_nombres', 'hijos18', // Agrega más columnas si es necesario
+        'cedula', 'apellidos_nombres', 'hijos_menor_igual_18', // Agrega más columnas si es necesario
     ];
 }

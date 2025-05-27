@@ -40,7 +40,7 @@
                     <td>{{ $usuario->cedula }}</td>
                     <td>{{ $usuario->apellidos_nombres }}</td>
                     <td>{{ $usuario->sexo }}</td>
-                    <td>{{ $usuario->hijos18 }}</td>
+                    <td>{{ $usuario->hijos_menor_igual_18 }}</td>
                 </tr>
             @empty
                 <tr>

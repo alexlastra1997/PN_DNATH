@@ -15,5 +15,5 @@ class Usuario extends Model
     protected $table = 'usuarios';
 
     // Define los campos que quieres permitir asignar masivamente
-    protected $fillable = ['cedula', 'apellidos_nombres', 'hijos18'];
+    protected $fillable = ['cedula', 'apellidos_nombres', 'hijos_menor_igual_18'];
 }

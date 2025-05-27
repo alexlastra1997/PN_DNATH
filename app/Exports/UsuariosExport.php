@@ -22,7 +22,7 @@ class UsuariosExport implements FromCollection, WithHeadings
                 'cedula' => $usuario->cedula,
                 'nombre' => $usuario->apellidos_nombres,
                 'sexo' => $usuario->sexo,
-                'hijos18' => $usuario->hijos18,
+                'hijos_menor_igual_18' => $usuario->hijos_menor_igual_18,
             ];
         });
     }

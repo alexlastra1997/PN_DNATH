@@ -2,12 +2,12 @@
 @extends('layouts.app')
 
 @section('content')
-
+                       
     <section class="bg-gray-50 dark:  sm:py-5">
         <div class="px-4 mx-auto max-w-screen-2xl lg:px-12">
             <div class="relative overflow-hidden bg-white shadow-md dark:bg-gray-800 sm:rounded-lg">
                 <div class="flex flex-col px-4 py-3 space-y-3 lg:flex-row lg:items-center lg:justify-between lg:space-y-0 lg:space-x-4">
-                    
+
                     <form action="#" method="GET" class="hidden md:block md:pl-2">
                         <label for="topbar-search" class="sr-only">Search</label>
                         <div class="relative md:w-96">
@@ -106,11 +106,11 @@
                                         </div>
                                         
                                         <div>
-                                            <label for="hijos18" class="block text-sm font-medium text-gray-700 dark:text-gray-200">Número de hijos</label>
-                                            <select name="hijos18" id="hijos18" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500">>
+                                            <label for="hijos_menor_igual_18" class="block text-sm font-medium text-gray-700 dark:text-gray-200">Número de hijos</label>
+                                            <select name="hijos_menor_igual_18" id="hijos_menor_igual_18" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500">>
                                                 <option value="">-- Todos --</option>
-                                                @foreach($hijos18 as $hijos)
-                                                    <option value="{{ $hijos }}" {{ request('hijos18') == $hijos ? 'selected' : '' }}>
+                                                @foreach($hijos_menor_igual_18 as $hijos)
+                                                    <option value="{{ $hijos }}" {{ request('hijos_menor_igual_18') == $hijos ? 'selected' : '' }}>
                                                         {{ $hijos }}
                                                     </option>
                                                 @endforeach
@@ -390,10 +390,12 @@
                                     {{ $usuario->tipo_personal }}
                                     </div>
                                 </td>
-                                <td class="px-4 py-2 font-medium text-gray-900 whitespace-nowrap dark:text-white"><a href="{{ route('usuarios.show', $usuario->id) }}"
+                                <td class="px-4 py-2 font-medium text-gray-900 whitespace-nowrap dark:text-white">
+                                    <a href="{{ route('usuarios.show', $usuario->id) }}"
                                     class="inline-block bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm shadow">
                                     Ver Perfil
-                                </a></td>
+                                </a>
+                            </td>
                             </tr>  
                         @endforeach
                         </tbody>
