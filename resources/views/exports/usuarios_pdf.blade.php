@@ -29,18 +29,26 @@
         <thead>
             <tr>
                 <th>Cédula</th>
+                <th>Grado</th>
                 <th>Nombre</th>
-                <th>Sexo</th>
-                <th>Hijos < 18</th>
+                <th>Titulo Senecyt</th>
+                <th>Capacitacion</th>
+                <th>Unidad</th>
+                <th>Funcion que cumple</th>
             </tr>
         </thead>
         <tbody>
             @forelse($usuarios as $usuario)
                 <tr>
                     <td>{{ $usuario->cedula }}</td>
+                    <td>{{ $usuario->grado }}</td>
                     <td>{{ $usuario->apellidos_nombres }}</td>
-                    <td>{{ $usuario->sexo }}</td>
-                    <td>{{ $usuario->hijos_menor_igual_18 }}</td>
+                    <td>{{ $usuario->titulos_senescyt }}</td>
+                    <td>{{ $usuario->capacitacion }}</td>
+                    <td>{{ $usuario->unidad }}</td>
+                    <td>{{ $usuario->funcion }}</td>
+
+                    capacitacion
                 </tr>
             @empty
                 <tr>

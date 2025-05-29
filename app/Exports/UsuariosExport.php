@@ -20,15 +20,18 @@ class UsuariosExport implements FromCollection, WithHeadings
         return $this->usuarios->map(function ($usuario) {
             return [
                 'cedula' => $usuario->cedula,
+                'grado' => $usuario->grado,
                 'nombre' => $usuario->apellidos_nombres,
-                'sexo' => $usuario->sexo,
-                'hijos_menor_igual_18' => $usuario->hijos_menor_igual_18,
+                'titulos_senescyt' => $usuario->titulos_senescyt,
+                'Capacitaciones' => $usuario->capacitacion,
+                'Unidad' => $usuario->unidad,
+                'Funcion' => $usuario->funcion,
             ];
         });
     }
 
     public function headings(): array
     {
-        return ['Cédula', 'Nombre', 'Sexo', 'Hijos < 18'];
+        return ['Cédula', 'grado', 'Nombre','titulos_senescyt','capacitacion','unidad','funcion'];
     }
 }
