@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Support\Facades\Session;
 use App\Models\Usuario;
 use App\Models\NumDemerito;
 use Illuminate\Http\Request;
@@ -322,6 +323,172 @@ class UsuarioController extends Controller
     
         abort(404);
     }
+
+
+        public function agregar($id)
+    {
+        $usuario = \App\Models\Usuario::findOrFail($id);
+        $seleccionados = session()->get('usuarios_seleccionados', []);
+
+        if (in_array($id, $seleccionados)) {
+            return redirect()->back()->with('error', 'ERROR, USUARIO YA SELECCIONADO');
+        }
+
+        $seleccionados[] = $id;
+        session()->put('usuarios_seleccionados', $seleccionados);
+
+        return redirect()->back()->with('success', 'SERVIDOR POLICIAL AGREGADO CORRECTAMENTE');
+    }
+
+
+    public function seleccionados()
+    {
+        $ids = session()->get('usuarios_seleccionados', []);
+        $usuarios = Usuario::whereIn('id', $ids)->get();
+
+        // Extraemos valores únicos para filtros
+        $filtros = [
+            'estado_civil' => Usuario::distinct()->pluck('estado_civil')->filter()->unique()->sort()->values(),
+            'provincia_trabaja' => Usuario::distinct()->pluck('provincia_trabaja')->filter()->unique()->sort()->values(),
+            'provincia_vive' => Usuario::distinct()->pluck('provincia_vive')->filter()->unique()->sort()->values(),
+            'contrato_estudios' => Usuario::distinct()->pluck('contrato_estudios')->filter()->unique()->sort()->values(),
+            'conyuge_policia_activo' => Usuario::distinct()->pluck('conyuge_policia_activo')->filter()->unique()->sort()->values(),
+            'enf_catast_sp' => Usuario::distinct()->pluck('enf_catast_sp')->filter()->unique()->sort()->values(),
+            'enf_catast_conyuge_hijos' => Usuario::distinct()->pluck('enf_catast_conyuge_hijos')->filter()->unique()->sort()->values(),
+            'discapacidad_sp' => Usuario::distinct()->pluck('discapacidad_sp')->filter()->unique()->sort()->values(),
+            'discapacidad_conyuge_hijos' => Usuario::distinct()->pluck('discapacidad_conyuge_hijos')->filter()->unique()->sort()->values(),
+            'hijos_menor_igual_18' => Usuario::distinct()->pluck('hijos_menor_igual_18')->filter()->unique()->sort()->values(),
+            'alertas' => Usuario::distinct()->pluck('alertas')->filter()->unique()->sort()->values(),
+            'novedad_situacion' => Usuario::distinct()->pluck('novedad_situacion')->filter()->unique()->sort()->values(),
+            'maternidad' => Usuario::distinct()->pluck('maternidad')->filter()->unique()->sort()->values(),
+        ];
+
+        return view('usuarios.seleccionados', compact('usuarios', 'filtros'));
+    }
+
+    public function eliminarSeleccionado($id)
+    {
+        $seleccionados = session()->get('usuarios_seleccionados', []);
+        $seleccionados = array_filter($seleccionados, fn($uid) => $uid != $id);
+        session()->put('usuarios_seleccionados', $seleccionados);
+
+        return redirect()->back()->with('success', 'Usuario eliminado de la selección.');
+    }
+
+
+    public function factibilidad(Request $request)
+    {
+        $ids = session()->get('usuarios_seleccionados', []);
+        $usuarios = Usuario::whereIn('id', $ids)->get();
+
+        // Campos binarios que se analizan con "sí" o "no"
+        $camposBinarios = [
+            'contrato_estudios',
+            'conyuge_policia_activo',
+            'enf_catast_sp',
+            'enf_catast_conyuge_hijos',
+            'discapacidad_sp',
+            'discapacidad_conyuge_hijos',
+            'hijos_menor_igual_18',
+            'alertas',
+            'novedad_situacion',
+            'maternidad'
+        ];
+
+        // Todos los filtros posibles
+        $todosFiltros = array_merge(['estado_civil', 'provincia_trabaja', 'provincia_vive'], $camposBinarios);
+
+        // Filtrar solo los parámetros realmente seleccionados por el usuario
+        $filtrosActivos = collect($todosFiltros)->filter(fn($campo) => $request->filled($campo))->values();
+
+        $totalCriterios = $filtrosActivos->count();
+
+        $usuarios = $usuarios->map(function ($usuario) use ($request, $filtrosActivos, $camposBinarios, $totalCriterios) {
+            if ($totalCriterios === 0) {
+                $usuario->factibilidad = 0;
+                return $usuario;
+            }
+
+            $score = 0;
+
+            foreach ($filtrosActivos as $campo) {
+                $valorUsuario = trim(strtolower((string) $usuario->$campo));
+                $valorFiltro = trim(strtolower($request->$campo));
+
+                if (in_array($campo, $camposBinarios)) {
+                    // Campo binario
+                    if ($valorFiltro === 'si' && $valorUsuario !== '') {
+                        $score++;
+                    } elseif ($valorFiltro === 'no' && $valorUsuario === '') {
+                        $score++;
+                    }
+                } else {
+                    // Campo de coincidencia exacta (texto)
+                    if ($valorFiltro === $valorUsuario) {
+                        $score++;
+                    }
+                }
+            }
+
+            $usuario->factibilidad = round(($score / $totalCriterios) * 100);
+            return $usuario;
+        });
+
+        return view('usuarios.factibilidad_resultado', compact('usuarios'));
+    }
+
+    public function exportarFactibilidadPdf(Request $request)
+    {
+        $ids = session()->get('usuarios_seleccionados', []);
+        $usuarios = \App\Models\Usuario::whereIn('id', $ids)->get();
+        $user = auth()->user(); // usuario autenticado
+
+        $campos = [
+            'estado_civil', 'provincia_trabaja', 'provincia_vive',
+            'contrato_estudios', 'conyuge_policia_activo', 'enf_catast_sp',
+            'enf_catast_conyuge_hijos', 'discapacidad_sp', 'discapacidad_conyuge_hijos',
+            'hijos_menor_igual_18', 'alertas', 'novedad_situacion', 'maternidad'
+        ];
+
+        $filtrosActivos = collect($campos)->filter(fn($campo) => $request->filled($campo))->values();
+        $total = $filtrosActivos->count();
+
+        $camposBinarios = array_slice($campos, 3);
+
+        $usuarios = $usuarios->map(function ($usuario) use ($request, $filtrosActivos, $camposBinarios, $total) {
+            $detalle = [];
+            $score = 0;
+
+            foreach ($filtrosActivos as $campo) {
+                $valorUsuario = trim(strtolower((string) $usuario->$campo));
+                $valorFiltro = trim(strtolower($request->$campo));
+
+                $cumple = in_array($campo, $camposBinarios)
+                    ? ($valorFiltro === 'si' && $valorUsuario !== '') || ($valorFiltro === 'no' && $valorUsuario === '')
+                    : ($valorUsuario === $valorFiltro);
+
+                if ($cumple) $score++;
+
+                $detalle[] = [
+                    'campo' => ucwords(str_replace('_', ' ', $campo)),
+                    'esperado' => $valorFiltro,
+                    'usuario' => $valorUsuario ?: '---',
+                    'cumple' => $cumple
+                ];
+            }
+
+            $usuario->factibilidad = $total ? round(($score / $total) * 100) : 0;
+            $usuario->detalle = $detalle;
+            return $usuario;
+        });
+
+        $fecha = now()->format('d/m/Y H:i');
+
+        return \Barryvdh\DomPDF\Facade\Pdf::loadView('usuarios.factibilidad_pdf', compact('usuarios', 'user', 'fecha'))
+            ->download('reporte_factibilidad.pdf');
+    }
+
+
 
    
 }

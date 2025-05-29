@@ -2,11 +2,59 @@
 @extends('layouts.app')
 
 @section('content')
+
+    @if(session('success'))
+        <div class="alert-auto-dismiss mb-4 p-4 rounded bg-green-100 text-green-800 border border-green-300">
+            {{ session('success') }}
+        </div>
+    @endif
+
+    @if(session('error'))
+        <div class=" alert-auto-dismiss mb-4 p-4 rounded bg-red-100 text-red-800 border border-red-300">
+            {{ session('error') }}
+        </div>
+    @endif
+
+    <script>
+    setTimeout(() => {
+            document.querySelectorAll('.alert-auto-dismiss').forEach(el => el.remove());
+        }, 4000);
+    </script>
+
+
                        
     <section class="bg-gray-50 dark:  sm:py-5">
         <div class="px-4 mx-auto max-w-screen-2xl lg:px-12">
             <div class="relative overflow-hidden bg-white shadow-md dark:bg-gray-800 sm:rounded-lg">
                 <div class="flex flex-col px-4 py-3 space-y-3 lg:flex-row lg:items-center lg:justify-between lg:space-y-0 lg:space-x-4">
+
+                    <!-- Botón VER SELECCIONADOS encima de la tabla -->
+                    @php
+                        $seleccionados = session('usuarios_seleccionados', []);
+                        $totalSeleccionados = count($seleccionados);
+                    @endphp
+
+                    <div class="mb-4 relative inline-block">
+                        <a href="{{ route('usuarios.seleccionados') }}"
+                        class="relative inline-flex items-center justify-center w-10 h-10 bg-yellow-600 rounded-full hover:bg-yellow-700 text-white">
+
+                            <!-- Ícono de usuario -->
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none"
+                                viewBox="0 0 24 24" stroke-width="1.5"
+                                stroke="currentColor" class="w-6 h-6">
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                    d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.5 20.25a8.25 8.25 0 1115 0" />
+                            </svg>
+
+                            <!-- Badge / contador -->
+                            @if($totalSeleccionados > 0)
+                                <span class="absolute -top-1 -right-1 bg-red-600 text-white text-xs font-bold px-1.5 py-0.5 rounded-full">
+                                    {{ $totalSeleccionados }}
+                                </span>
+                            @endif
+                        </a>
+</div>
+
 
                     <form action="#" method="GET" class="hidden md:block md:pl-2">
                         <label for="topbar-search" class="sr-only">Search</label>
@@ -394,6 +442,10 @@
                                     <a href="{{ route('usuarios.show', $usuario->id) }}"
                                     class="inline-block bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm shadow">
                                     Ver Perfil
+                                </a>
+                                <a href="{{ route('usuarios.agregar', $usuario->id) }}"
+                                    class="px-4 py-2 font-medium bg-yellow-500 text-white text-sm rounded hover:bg-yellow-600">
+                                    + Agregar
                                 </a>
                             </td>
                             </tr>  
