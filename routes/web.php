@@ -8,6 +8,8 @@ use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\CargoController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\NomenclaturaController;
+use App\Http\Controllers\OrganicoEfectivoController;
 use App\Http\Controllers\ProvinciaController;
 use App\Http\Controllers\ReporteOrganicoController;
 
@@ -59,5 +61,17 @@ Route::middleware('auth')->group(function () {
     Route::get('/reporte-organico/importar', [ReporteOrganicoController::class, 'showForm'])->name('reporte.form');
     Route::post('/reporte-organico/importar', [ReporteOrganicoController::class, 'importar'])->name('reporte.importar');
 
+
+    Route::get('/organico-efectivo', [OrganicoEfectivoController::class, 'index'])->name('organico-efectivo.index');
+    Route::get('/organico-efectivo/{nombres?}', [OrganicoEfectivoController::class, 'index'])->where('nombres', '.*');
+
+
+    Route::get('/nomenclatura/{niveles?}', [OrganicoEfectivoController::class, 'nomenclatura'])
+    ->where('niveles', '.*')
+    ->name('nomenclatura.index');
+
+    Route::get('/nomenclatura/{niveles?}', [NomenclaturaController::class, 'nomenclatura'])
+    ->where('niveles', '.*')
+    ->name('nomenclatura.index');
 });
 

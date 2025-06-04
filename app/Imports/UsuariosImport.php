@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Imports;
 
 use Illuminate\Support\Collection;
@@ -7,6 +6,7 @@ use Maatwebsite\Excel\Concerns\ToCollection;
 use Maatwebsite\Excel\Concerns\WithHeadingRow;
 use Maatwebsite\Excel\Concerns\WithChunkReading;
 use Illuminate\Support\Facades\DB;
+use PhpOffice\PhpSpreadsheet\Shared\Date; // Importante para convertir
 
 class UsuariosImport implements ToCollection, WithHeadingRow, WithChunkReading
 {
@@ -25,15 +25,15 @@ class UsuariosImport implements ToCollection, WithHeadingRow, WithChunkReading
                 'estado_civil' => $row['estado_civil'],
                 'promocion' => $row['promocion'],
                 'cdg_promocion' => $row['cdg_promocion'],
-                'fecha_ingreso' => $row['fecha_ingreso'],
+                'fecha_ingreso' => $this->transformDate($row['fecha_ingreso']),
                 'unidad_anterior' => $row['unidad_anterior'],
-                'fecha_pase_anterior' => $row['fecha_pase_anterior'],
+                'fecha_pase_anterior' => $this->transformDate($row['fecha_pase_anterior']),
                 'tiempo_unidad_anterior' => $row['tiempo_unidad_anterior'],
-                'fecha_pase_actual' => $row['fecha_pase_actual'],
+                'fecha_pase_actual' => $this->transformDate($row['fecha_pase_actual']),
                 'tiempo_ultimo_pase' => $row['tiempo_ultimo_pase'],
-                'fecha_actual' => $row['fecha_actual'],
+                'fecha_actual' => $this->transformDate($row['fecha_actual']),
                 'tiempo_pase_formula' => $row['tiempo_pase_formula'],
-                'fecha_presentacion' => $row['fecha_presentacion'],
+                'fecha_presentacion' => $this->transformDate($row['fecha_presentacion']),
                 'servicio_grupal' => $row['servicio_grupal'],
                 'domicilio' => $row['domicilio'],
                 'provincia_trabaja' => $row['provincia_trabaja'],
@@ -55,6 +55,12 @@ class UsuariosImport implements ToCollection, WithHeadingRow, WithChunkReading
                 'num_demerito' => $row['num_demerito'],
                 'novedad_situacion' => $row['novedad_situacion'],
                 'historico_pases' => $row['historico_pases'],
+                'traslado_temporal' => $row['traslado_temporal'],
+                'traslado_eventual' => $row['traslado_eventual'],
+                'comisiones' => $row['comisiones'],
+                'fecha_efectivo' => $row['fecha_efectivo'],
+                'nomeclatura_efectivo' => $row['nomeclatura_efectivo'],
+                'tipo_efectivo' => $row['tipo_efectivo'],
                 'designaciones' => $row['designaciones'],
                 'maternidad' => $row['maternidad'],
                 'proyeccion_licencia' => $row['proyeccion_licencia'],
@@ -91,6 +97,14 @@ class UsuariosImport implements ToCollection, WithHeadingRow, WithChunkReading
 
     public function chunkSize(): int
     {
-        return 1000; // Puedes ajustarlo según la capacidad de tu servidor
+        return 1000;
+    }
+
+    private function transformDate($value)
+    {
+        if (is_numeric($value)) {
+            return Date::excelToDateTimeObject($value)->format('Y-m-d');
+        }
+        return $value;
     }
 }
