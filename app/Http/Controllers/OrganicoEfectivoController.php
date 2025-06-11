@@ -2,249 +2,194 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Usuario;
+use Carbon\Carbon;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use App\Models\Cargo;
 
 class OrganicoEfectivoController extends Controller
 {
-    public function nomenclatura(Request $request, $niveles = null)
+    public function index(Request $request)
     {
-        // Aseguramos que niveles sea siempre array
-        $niveles = $niveles ? explode('/', urldecode($niveles)) : [];
+        $query = Usuario::select('cedula', 'grado', 'apellidos_nombres', 'nomenclatura_territorio_efectivo');
 
-        $nivelActual = count($niveles);
-
-        // Leer todos los registros
-        $registros = DB::table('reporte_organico')->get();
-
-        $proximosNiveles = [];
-        $registrosFinales = [];
-
-        foreach ($registros as $registro) {
-            $partes = explode('-', trim($registro->nomenclatura, '-'));
-
-            // Comparar niveles navegados
-            $coincide = true;
-            foreach ($niveles as $index => $nivelEsperado) {
-                if (!isset($partes[$index]) || $partes[$index] !== $nivelEsperado) {
-                    $coincide = false;
-                    break;
-                }
-            }
-
-            if (!$coincide) {
-                continue;
-            }
-
-            // Si hay siguiente nivel, seguimos
-            if (isset($partes[$nivelActual])) {
-                $proximosNiveles[] = $partes[$nivelActual];
-            } else {
-                // No hay más niveles -> registro final
-                $registrosFinales[] = $registro;
-            }
+        if ($request->filled('grado')) {
+            $query->where('grado', $request->grado);
         }
 
-        $nombresCards = array_count_values($proximosNiveles);
-
-        return view('organico_nomenclatura', [
-            'nombresCards' => $nombresCards,
-            'niveles' => $niveles,
-            'registrosFinales' => $registrosFinales
-        ]);
-    }
-
-
-    public function index(Request $request, ...$niveles)
-    {
-        $search = $request->input('search');
-    $filtroCdgPromocion = $request->input('cdg_promocion', []); // array porque puede seleccionar varios
-    $filtroProvinciaVive = $request->input('provincia_vive');
-    $filtroProvinciaTrabaja = $request->input('provincia_trabaja');
-
-    $usuariosQuery = DB::table('usuarios')
-        ->select('cedula', 'grado', 'apellidos_nombres', 'traslado_temporal', 'fecha_pase_actual', 'unidad', 'funcion', 'cdg_promocion', 'provincia_vive', 'provincia_trabaja');
-
-    if ($search) {
-        $usuariosQuery->where(function($query) use ($search) {
-            $query->where('cedula', 'like', '%' . $search . '%')
-                  ->orWhere('apellidos_nombres', 'like', '%' . $search . '%');
-        });
-    }
-
-    if (!empty($filtroCdgPromocion)) {
-        $usuariosQuery->whereIn('cdg_promocion', $filtroCdgPromocion);
-    }
-
-    if (!empty($filtroProvinciaVive)) {
-        $usuariosQuery->where('provincia_vive', $filtroProvinciaVive);
-    }
-
-    if (!empty($filtroProvinciaTrabaja)) {
-        $usuariosQuery->where('provincia_trabaja', $filtroProvinciaTrabaja);
-    }
-        
-        $usuarios = $usuariosQuery->get();
-
-        $datos = [];
-
-        $nivelActualString = trim(implode('-', $niveles), '-');
-
-        foreach ($usuarios as $usuario) {
-            $trasladoTemporal = $this->getTrasladoMasReciente($usuario->traslado_temporal);
-
-            $fechaTrasladoTemporal = $trasladoTemporal['fecha'] ?? null;
-            $detalleTrasladoTemporal = $trasladoTemporal['detalle'] ?? null;
-
-            $fechaPaseActual = $usuario->fecha_pase_actual;
-
-            $fechaCercana = $this->compararFechasCercanaAHoy($fechaTrasladoTemporal, $fechaPaseActual);
-
-            if ($fechaCercana === $fechaTrasladoTemporal) {
-                $mejorFecha = $fechaTrasladoTemporal;
-                $detalles = $this->extraerNomenclaturaTelegrama($detalleTrasladoTemporal, $fechaTrasladoTemporal);
-                $origen = 'traslado';
-            } else {
-                $mejorFecha = $fechaPaseActual;
-                $detalles = [
-                    'nomenclatura' => $usuario->unidad ?? '-',
-                    'telegrama' => $usuario->funcion ?? '-'
-                ];
-                $origen = 'pase_actual';
-            }
-
-            // Arreglar nomenclatura
-        $nomenclaturaCompleta = trim($detalles['nomenclatura'] ?? '-');
-
-        // 1. Quitar el guión final si existe
-        $nomenclaturaSinGuionFinal = rtrim($nomenclaturaCompleta, '-');
-
-        // 2. Explode en partes
-        $partes = explode('-', $nomenclaturaSinGuionFinal);
-
-        // 3. Trim de cada parte
-        $partes = array_map('trim', $partes);
-
-        // 4. Guardar bien la nomenclatura completa
-        $nomenclaturaCompletaFormateada = implode('-', $partes);
-
-        // 5. Guardar
-        $datos[] = [
-            'cedula' => $usuario->cedula,
-            'grado' => $usuario->grado,
-            'apellidos_nombres' => $usuario->apellidos_nombres,
-            'fecha' => $mejorFecha,
-            'nomenclatura' => $detalles['nomenclatura'] ?? '-',
-            'telegrama' => $detalles['telegrama'] ?? '-',
-            'origen' => $origen,
-            'nomenclatura_partes' => array_values($partes),
-            'nomenclatura_completa' => $nomenclaturaCompletaFormateada,
-        ];
-
-        }
-
-        if (!empty($niveles)) {
-            $datos = array_filter($datos, function($usuario) use ($nivelActualString) {
-                return Str::startsWith($usuario['nomenclatura_completa'], $nivelActualString);
+        if ($request->filled('buscar')) {
+            $buscar = $request->buscar;
+            $query->where(function($q) use ($buscar) {
+                $q->where('cedula', 'like', "%{$buscar}%")
+                ->orWhere('apellidos_nombres', 'like', "%{$buscar}%");
             });
         }
 
-        $proximoNivelIndex = count($niveles);
-        $proximosNiveles = [];
+        $usuarios = $query->paginate(50)->appends($request->all());
 
-        foreach ($datos as $usuario) {
-            if (isset($usuario['nomenclatura_partes'][$proximoNivelIndex])) {
-                $proximosNiveles[] = $usuario['nomenclatura_partes'][$proximoNivelIndex];
-            }
-        }
+        // Para llenar el select dinámico con todos los grados únicos
+        $grados = Usuario::select('grado')->distinct()->orderBy('grado')->pluck('grado');
 
-        $nombresCards = [];
-        foreach (array_count_values($proximosNiveles) as $nivel => $cantidad) {
-            $nombresCards[] = [
-                'nombre' => $nivel,
-                'cantidad' => $cantidad
-            ];
-        }
+        return view('organico_efectivo', compact('usuarios', 'grados'));
+    }
 
-       
+    public function agregar(Request $request)
+    {
+        $cedula = $request->input('cedula');
+
+        $usuario = Usuario::where('cedula', $cedula)->first();
+        if (!$usuario) return redirect()->back()->with('error', 'Usuario no encontrado');
+
+        $carrito = session()->get('carrito_usuarios', []);
         
-    $cdgPromociones = DB::table('usuarios')->distinct()->pluck('cdg_promocion')->filter()->unique()->sort()->values();
-    $provinciasVive = DB::table('usuarios')->distinct()->pluck('provincia_vive')->filter()->unique()->sort()->values();
-    $provinciasTrabaja = DB::table('usuarios')->distinct()->pluck('provincia_trabaja')->filter()->unique()->sort()->values();
-
-        return view('organico_efectivo', compact('datos', 'nombresCards', 'niveles', 'search', 'filtroCdgPromocion', 'filtroProvinciaVive', 'filtroProvinciaTrabaja', 'cdgPromociones', 'provinciasVive', 'provinciasTrabaja'));
-    }
-
-    private function getTrasladoMasReciente($traslados)
-    {
-        if (empty($traslados)) {
-            return null;
+        // Evitar duplicados
+        if (!array_key_exists($cedula, $carrito)) {
+            $carrito[$cedula] = $usuario;
+            session(['carrito_usuarios' => $carrito]);
         }
 
-        $trasladosArray = explode('|', $traslados);
+        return redirect()->route('organico.efectivo')->with('success', 'Usuario agregado');
+    }
 
-        $trasladosConFechas = [];
+    public function mostrarSeleccionados()
+{
+    $usuariosSeleccionados = session('carrito_usuarios', []);
+    $cargos = \App\Models\Cargo::select('numero', 'cargo')->orderBy('numero')->get();
 
-        foreach ($trasladosArray as $traslado) {
-            $datos = explode('--', $traslado);
+    return view('organico_efectivo_show', compact('usuariosSeleccionados', 'cargos'));
+}
 
-            if (isset($datos[0])) {
-                $fecha = trim($datos[0]);
-                if ($this->isValidDate($fecha)) {
-                    $trasladosConFechas[] = [
-                        'fecha' => $fecha,
-                        'detalle' => trim($traslado)
-                    ];
-                }
+    public function limpiarCarrito()
+    {
+        session()->forget('carrito_usuarios');
+        return redirect()->route('organico.efectivo')->with('success', 'Lista vaciada');
+    }
+
+    public function buscarVacante(Request $request)
+    {
+        $cargo = $request->input('cargo');
+        $tiempo = $request->input('tiempo');
+
+        $query = \App\Models\Usuario::where('funcion', 'like', "%{$cargo}%");
+
+        if ($tiempo) {
+            $hoy = Carbon::now();
+            switch ($tiempo) {
+                case '2':
+                    $fechaMinima = $hoy->copy()->subYears(2);
+                    break;
+                case '3':
+                    $fechaMinima = $hoy->copy()->subYears(3);
+                    break;
+                case '4':
+                    $fechaMinima = $hoy->copy()->subYears(4);
+                    break;
+                case '5+':
+                    $fechaMinima = $hoy->copy()->subYears(5);
+                    break;
+                default:
+                    $fechaMinima = null;
+            }
+
+            if ($fechaMinima) {
+                $query->whereDate('fecha_territorio_efectivo', '<=', $fechaMinima);
             }
         }
 
-        if (empty($trasladosConFechas)) {
-            return null;
+        $usuariosCoincidentes = $query->paginate(20)->appends($request->all());
+
+        $cargos = \App\Models\Cargo::select('numero', 'cargo')->orderBy('numero')->get();
+
+        return view('organico_efectivo_show', [
+            'usuariosSeleccionados' => session('carrito_usuarios', []),
+            'usuariosCoincidentes' => $usuariosCoincidentes,
+            'cargos' => $cargos,
+            'cargoSeleccionado' => $cargo,
+            'tiempoSeleccionado' => $tiempo,
+        ]);
+    }
+
+public function evaluar(Request $request)
+{
+    $cedulaB = $request->input('cedula_b');
+    $usuarioA = collect(session('carrito_usuarios', []))->first();
+    $usuarioB = Usuario::where('cedula', $cedulaB)->first();
+
+    if (!$usuarioA || !$usuarioB) {
+        return back()->with('error', 'No se encontró usuario A o B');
+    }
+
+    $cargo = Cargo::whereRaw('LOWER(cargo) = ?', [strtolower($usuarioB->funcion)])->first();
+
+    $cargoSugerido = null;
+    if (!$cargo) {
+        $cargosTodos = Cargo::all();
+        $mejorCoincidencia = 0;
+        foreach ($cargosTodos as $c) {
+            similar_text(strtolower($c->cargo), strtolower($usuarioB->funcion), $porcentaje);
+            if ($porcentaje > $mejorCoincidencia) {
+                $mejorCoincidencia = $porcentaje;
+                $cargo = $c;
+                $cargoSugerido = true;
+            }
         }
-
-        usort($trasladosConFechas, function ($a, $b) {
-            return strtotime($b['fecha']) - strtotime($a['fecha']);
-        });
-
-        return $trasladosConFechas[0];
     }
 
-    private function isValidDate($date)
-    {
-        $d = \DateTime::createFromFormat('Y-m-d', $date);
-        return $d && $d->format('Y-m-d') === $date;
-    }
+    $gradosJerarquia = [
+        'SBOS', 'SGOS', 'SGOP', 'SGOM', 'SGT', 'SGT1', 'SGT2', 'SBO', 'SBT', 'TNT', 'STNT', 'ASP',
+        'SUBS', 'SUBT', 'TTE', 'CPT', 'MYR', 'TCNL', 'CRNL', 'GEN'
+    ];
 
-    private function compararFechasCercanaAHoy($fecha1, $fecha2)
-    {
-        $hoy = strtotime(date('Y-m-d'));
+    $gradoA = strtoupper(trim($usuarioA['grado']));
+    $gradoB = strtoupper(trim($usuarioB->grado));
+    $gradoMin = strtoupper(trim($cargo->directivo_minimo ?? $cargo->tecnico_minimo));
+    $gradoMax = strtoupper(trim($cargo->directivo_maximo ?? $cargo->tecnico_maximo));
 
-        $diferencia1 = $fecha1 ? abs($hoy - strtotime($fecha1)) : PHP_INT_MAX;
-        $diferencia2 = $fecha2 ? abs($hoy - strtotime($fecha2)) : PHP_INT_MAX;
+    $indexA = array_search($gradoA, $gradosJerarquia);
+    $indexB = array_search($gradoB, $gradosJerarquia);
+    $indexMin = array_search($gradoMin, $gradosJerarquia);
+    $indexMax = array_search($gradoMax, $gradosJerarquia);
 
-        return ($diferencia1 <= $diferencia2) ? $fecha1 : $fecha2;
-    }
-
-    private function extraerNomenclaturaTelegrama($detalleCompleto, $fecha)
-    {
-        if (!$detalleCompleto) {
-            return ['nomenclatura' => '-', 'telegrama' => '-'];
+    $resultado = 'NO FACTIBLE';
+    if ($indexA !== false && $indexMin !== false && $indexMax !== false) {
+        if ($indexA < $indexMin) {
+            $mensaje = "⚠️ El servidor policial <strong>{$usuarioA['apellidos_nombres']}</strong> está por DEBAJO del mínimo requerido.";
+        } elseif ($indexA > $indexMax) {
+            $mensaje = "❌ El servidor policial <strong>{$usuarioA['apellidos_nombres']}</strong> está por ENCIMA del máximo permitido.";
+        } else {
+            $mensaje = "✅ El servidor policial <strong>{$usuarioA['apellidos_nombres']}</strong> cumple con el perfil de grado requerido.";
+            $resultado = 'FACTIBLE';
         }
-
-        $detalleSinFecha = str_replace($fecha . ' -- ', '', $detalleCompleto);
-
-        $partes = array_map('trim', explode('--', $detalleSinFecha));
-
-        if (count($partes) >= 2) {
-            return [
-                'nomenclatura' => $partes[0],
-                'telegrama' => $partes[count($partes) - 1]
-            ];
-        }
-
-        return ['nomenclatura' => '-', 'telegrama' => '-'];
+    } else {
+        $mensaje = "❌ No se pudo comparar porque uno de los grados no está definido en la jerarquía.";
     }
+
+    $mensajeB = null;
+    $validezB = 'FACTIBLE';
+    if ($indexB === false || $indexMin === false || $indexMax === false) {
+        $mensajeB = "❌El servidor policial <strong>{$usuarioB->apellidos_nombres}</strong> no está definido correctamente.";
+        $validezB = 'NO FACTIBLE';
+    } elseif ($indexB < $indexMin) {
+        $mensajeB = "❌ El servidor policial <strong>{$usuarioB->apellidos_nombres}</strong> está por DEBAJO del grado mínimo requerido para su propio cargo.";
+        $validezB = 'NO FACTIBLE';
+    } elseif ($indexB > $indexMax) {
+        $mensajeB = "❌ El servidor policial <strong>{$usuarioB->apellidos_nombres}</strong> está por ENCIMA del grado máximo permitido para su propio cargo.";
+        $validezB = 'NO FACTIBLE';
+    } else {
+        $mensajeB = "✅ El servidor policial <strong>{$usuarioB->apellidos_nombres}</strong> cumple con el perfil de grado para su cargo.";
+    }
+
+    return view('evaluacion_usuario', compact(
+        'usuarioA', 'usuarioB', 'cargo',
+        'mensaje', 'resultado',
+        'mensajeB', 'validezB',
+        'cargoSugerido'
+    ));
+}
+
+
+
 }

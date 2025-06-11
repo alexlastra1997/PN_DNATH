@@ -1,83 +1,67 @@
-
-
 @extends('layouts.app')
 
-@section('importar')
-    <div class="container mx-auto">
-        <h1 class="text-3xl font-bold mb-6 text-center">Organico Efectivo</h1>
+@section('content')
+<div class="container mx-auto p-6">
+    <h1 class="text-2xl font-bold mb-4">Orgánico Efectivo</h1>
 
-        <form method="GET" class="flex flex-wrap gap-4 mb-6">
+    <form method="GET" action="{{ route('organico.efectivo') }}" class="mb-4 flex flex-wrap items-center gap-4">
+    <input type="text" name="buscar" value="{{ request('buscar') }}" placeholder="Buscar por cédula o nombre"
+           class="border p-2 rounded w-64">
 
-    <input type="text" name="search" value="{{ request('search') }}" placeholder="Buscar por cédula o nombre" class="border rounded p-2">
-
-    <select name="cdg_promocion[]" multiple class="border rounded p-2 w-48 h-32">
-        <option disabled>Seleccione Promoción</option>
-        @foreach($cdgPromociones as $promocion)
-            <option value="{{ $promocion }}" {{ in_array($promocion, (array) $filtroCdgPromocion) ? 'selected' : '' }}>
-                {{ $promocion }}
-            </option>
+    <select name="grado" class="border p-2 rounded">
+        <option value="">-- Filtrar por Grado --</option>
+        @foreach ($grados as $grado)
+            <option value="{{ $grado }}" {{ request('grado') == $grado ? 'selected' : '' }}>{{ $grado }}</option>
         @endforeach
     </select>
 
-    <select name="provincia_vive" class="border rounded p-2 w-48">
-        <option value="">Seleccione Provincia donde Vive</option>
-        @foreach($provinciasVive as $provincia)
-            <option value="{{ $provincia }}" {{ $filtroProvinciaVive == $provincia ? 'selected' : '' }}>
-                {{ $provincia }}
-            </option>
-        @endforeach
-    </select>
+    <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Filtrar</button>
 
-    <select name="provincia_trabaja" class="border rounded p-2 w-48">
-        <option value="">Seleccione Provincia donde Trabaja</option>
-        @foreach($provinciasTrabaja as $provincia)
-            <option value="{{ $provincia }}" {{ $filtroProvinciaTrabaja == $provincia ? 'selected' : '' }}>
-                {{ $provincia }}
-            </option>
-        @endforeach
-    </select>
-
-    <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded">Filtrar</button>
+    <a href="{{ route('organico.efectivo') }}" class="text-sm text-gray-600 underline ml-2">Limpiar filtros</a>
 </form>
 
 
-
-        <!-- Tabla SIEMPRE -->
-        <div class="overflow-x-auto bg-white shadow-md rounded-lg mt-6">
-            <table class="min-w-full table-auto">
-                <thead>
-                    <tr class="bg-gray-200 text-gray-600 uppercase text-sm leading-normal">
-                        <th class="py-3 px-6 text-left">Cédula</th>
-                        <th class="py-3 px-6 text-left">Grado</th>
-                        <th class="py-3 px-6 text-left">Nombre y Apellidos</th>
-                        <th class="py-3 px-6 text-left">Fecha</th>
-                        <th class="py-3 px-6 text-left">Nomenclatura</th>
-                        <th class="py-3 px-6 text-left">Telegrama</th>
-                    </tr>
-                </thead>
-                <tbody class="text-gray-600 text-sm font-light">
-                    @forelse ($datos as $usuario)
-                        <tr class="border-b border-gray-200 hover:bg-gray-100">
-                            <td class="py-3 px-6">{{ $usuario['cedula'] }}</td>
-                            <td class="py-3 px-6">{{ $usuario['grado'] }}</td>
-                            <td class="py-3 px-6">{{ $usuario['apellidos_nombres'] }}</td>
-                            <td class="py-3 px-6">
-                                <span class="{{ $usuario['origen'] === 'traslado' ? 'text-red-600 font-bold' : 'text-green-600 font-bold' }}">
-                                    {{ $usuario['fecha'] ?? 'Sin fecha disponible' }}
-                                </span>
-                            </td>
-                            <td class="py-3 px-6">{{ $usuario['nomenclatura'] ?? '-' }}</td>
-                            <td class="py-3 px-6">{{ $usuario['telegrama'] ?? '-' }}</td>
-                        </tr>
-                    @empty
-                        <tr>
-                            <td colspan="6" class="py-3 px-6 text-center">No hay registros para mostrar en este nivel.</td>
-                        </tr>
-                    @endforelse
-                </tbody>
-            </table>
-        </div>
-       
+    <div class="mb-4 flex justify-between">
+        <a href="{{ route('organico.efectivo.seleccionados') }}" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+            Ver Seleccionados
+        </a>
+        <form method="POST" action="{{ route('organico.efectivo.limpiar') }}">
+            @csrf
+            <button class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700">Vaciar Lista</button>
+        </form>
     </div>
- @endsection
 
+    <table class="min-w-full bg-white border border-gray-300 rounded shadow">
+        <thead class="bg-gray-200">
+            <tr>
+                <th class="p-2 border">Cédula</th>
+                <th class="p-2 border">Grado</th>
+                <th class="p-2 border">Nombre</th>
+                <th class="p-2 border">Nomenclatura Efectivo</th>
+                <th class="p-2 border">Acción</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach ($usuarios as $usuario)
+                <tr class="hover:bg-gray-100">
+                    <td class="p-2 border">{{ $usuario->cedula }}</td>
+                    <td class="p-2 border">{{ $usuario->grado }}</td>
+                    <td class="p-2 border">{{ $usuario->apellidos_nombres }}</td>
+                    <td class="p-2 border">{{ $usuario->nomenclatura_territorio_efectivo }}</td>
+                    <td class="p-2 border text-center">
+                        <form action="{{ route('organico.efectivo.agregar') }}" method="POST">
+                            @csrf
+                            <input type="hidden" name="cedula" value="{{ $usuario->cedula }}">
+                            <button type="submit" class="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700">+ Agregar</button>
+                        </form>
+                    </td>
+                </tr>
+            @endforeach
+        </tbody>
+    </table>
+    <div class="mt-4">
+        {{ $usuarios->links('pagination::tailwind') }}
+    </div>
+
+</div>
+@endsection

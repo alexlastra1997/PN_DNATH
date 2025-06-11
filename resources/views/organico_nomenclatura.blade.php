@@ -22,50 +22,62 @@
         {{ !empty($niveles) ? 'Navegando: ' . implode(' / ', $niveles) : 'Seleccione un Nivel' }}
     </h1>
 
-    @if (!empty($nombresCards))
-        <!-- Mostrar niveles como Cards -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-            @foreach ($nombresCards as $nombre => $cantidad)
-                <a href="/nomenclatura/{{ implode('/', array_map('rawurlencode', array_merge($niveles, [$nombre]))) }}" class="block bg-white border border-gray-200 rounded-lg shadow p-6 hover:bg-gray-100 transition">
-                    <div class="text-xl font-semibold mb-2">{{ $nombre }}</div>
-                    <div class="text-gray-600 text-sm">{{ $cantidad }} registros</div>
-                </a>
-            @endforeach
-        </div>
-    @elseif (!empty($registrosFinales))
-        <!-- Mostrar tabla de registros finales -->
-        <div class="bg-white p-6 rounded-lg shadow">
-            <h2 class="text-xl font-bold mb-4">Registros finales:</h2>
-            <div class="overflow-x-auto">
-                <table class="min-w-full bg-white border border-gray-200">
-                    <thead>
-                        <tr class="bg-gray-100 text-gray-600 uppercase text-sm leading-normal">
-                            <th class="py-3 px-6 text-left">ID</th>
-                            <th class="py-3 px-6 text-left">Nombre</th>
-                            <th class="py-3 px-6 text-left">Nomenclatura</th>
-                        </tr>
-                    </thead>
-                    <tbody class="text-gray-600 text-sm font-light">
-                        @foreach ($registrosFinales as $registro)
-                            <tr class="border-b border-gray-200 hover:bg-gray-100">
-                                <td class="py-3 px-6">{{ $registro->id }}</td>
-                                <td class="py-3 px-6">{{ $registro->nombre ?? '-' }}</td>
-                                <td class="py-3 px-6">{{ $registro->nomenclatura }}</td>
-                            </tr>
-                        @endforeach
-                       
-                    </tbody>
-                    
-                </table>
-            </div>
-             
-        </div>
-    @else
-        <!-- No hay más niveles -->
-        <div class="col-span-3 text-center text-gray-500">
-            No hay más niveles para mostrar.
-        </div>
-    @endif
+    <!-- Grid Principal -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
 
+        <!-- SECCIÓN 1: NOMENCLATURAS (1/3) -->
+        <section class="bg-gray-100 p-6 rounded-lg shadow col-span-1">
+            <h2 class="text-xl font-bold mb-4">Sección 1: Nomenclaturas</h2>
+
+            @if (!empty($nombresCards))
+                <div class="flex flex-col space-y-4">
+                    @foreach ($nombresCards as $nombre => $cantidad)
+                        <a href="/nomenclatura/{{ implode('/', array_map('rawurlencode', array_merge($niveles, [$nombre]))) }}" class="block bg-white border border-gray-300 rounded-lg shadow p-4 hover:bg-gray-200 transition">
+                            <div class="text-lg font-semibold mb-2">{{ $nombre }}</div>
+                            <div class="text-gray-600 text-sm">{{ $cantidad }} registros</div>
+                        </a>
+                    @endforeach
+                </div>
+            @else
+                <div class="text-center text-gray-500">
+                    No hay más niveles para mostrar.
+                </div>
+            @endif
+        </section>
+
+        <!-- SECCIÓN 2: NUMÉRICOS POR GRADO (2/3) -->
+        <section class="col-span-2 bg-white p-6 rounded-lg shadow">
+            <h2 class="text-xl font-bold mb-4">Sección 2: Numéricos y Cargos</h2>
+
+            <div class="flex space-x-4 mb-6">
+                <a href="{{ route('nomenclatura.exportarExcel', implode('/', array_map('rawurlencode', $niveles))) }}" 
+                class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded">
+                    Generar Reporte Excel
+                </a>
+                <a href="{{ route('nomenclatura.exportarPDF', implode('/', array_map('rawurlencode', $niveles))) }}" 
+                class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded">
+                    Generar Reporte PDF
+                </a>
+            </div>
+
+
+            @if ($conteoGrados->count())
+                <!-- CARDS DE GRADOS -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    @foreach ($conteoGrados as $grado => $cantidad)
+                        <div class="block bg-gray-50 border border-gray-200 rounded-lg shadow p-6">
+                            <div class="text-lg font-semibold mb-2">{{ $grado ?? 'Sin Grado' }}</div>
+                            <div class="text-gray-600 text-sm">{{ $cantidad }} numéricos</div>
+                        </div>
+                    @endforeach
+                </div>
+            @else
+                <div class="text-center text-gray-500 mt-8">
+                    No hay datos numéricos o cargos para mostrar.
+                </div>
+            @endif
+        </section>
+
+    </div>
 </div>
 @endsection

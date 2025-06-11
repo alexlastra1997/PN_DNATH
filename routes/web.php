@@ -6,6 +6,7 @@ use App\Http\Controllers\ServidorPolicialController;
 use App\Http\Controllers\UsuarioController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\RegisterController;
+use App\Http\Controllers\BuscarVacanteController;
 use App\Http\Controllers\CargoController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\NomenclaturaController;
@@ -36,7 +37,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/usuarios/seleccionados', [UsuarioController::class, 'seleccionados'])->name('usuarios.seleccionados');
     Route::get('/usuarios/factibilidad', [UsuarioController::class, 'factibilidad'])->name('usuarios.factibilidad');
     Route::get('/usuarios/factibilidad/pdf', [UsuarioController::class, 'exportarFactibilidadPdf'])->name('usuarios.factibilidad.pdf');
-    
+
     Route::delete('/usuarios/seleccionados/{id}', [UsuarioController::class, 'eliminarSeleccionado'])->name('usuarios.eliminarSeleccionado');
     Route::get('/usuarios/{usuario}', [UsuarioController::class, 'show'])->name('usuarios.show');
     Route::get('/usuarios/export/{type}', [UsuarioController::class, 'export'])->name('usuarios.export');
@@ -62,9 +63,12 @@ Route::middleware('auth')->group(function () {
     Route::post('/reporte-organico/importar', [ReporteOrganicoController::class, 'importar'])->name('reporte.importar');
 
 
-    Route::get('/organico-efectivo', [OrganicoEfectivoController::class, 'index'])->name('organico-efectivo.index');
-    Route::get('/organico-efectivo/{nombres?}', [OrganicoEfectivoController::class, 'index'])->where('nombres', '.*');
-
+    Route::get('/organico-efectivo', [OrganicoEfectivoController::class, 'index'])->name('organico.efectivo');
+    Route::post('/organico-efectivo/agregar', [OrganicoEfectivoController::class, 'agregar'])->name('organico.efectivo.agregar');
+    Route::get('/organico-efectivo/seleccionados', [OrganicoEfectivoController::class, 'mostrarSeleccionados'])->name('organico.efectivo.seleccionados');
+    Route::post('/organico-efectivo/limpiar', [OrganicoEfectivoController::class, 'limpiarCarrito'])->name('organico.efectivo.limpiar');
+    Route::get('/organico-efectivo/buscar-vacante', [OrganicoEfectivoController::class, 'buscarVacante'])->name('organico.efectivo.buscarVacante');
+    Route::post('/organico-efectivo/evaluar', [OrganicoEfectivoController::class, 'evaluar'])->name('organico.efectivo.evaluar');
 
     Route::get('/nomenclatura/{niveles?}', [OrganicoEfectivoController::class, 'nomenclatura'])
     ->where('niveles', '.*')
@@ -73,5 +77,20 @@ Route::middleware('auth')->group(function () {
     Route::get('/nomenclatura/{niveles?}', [NomenclaturaController::class, 'nomenclatura'])
     ->where('niveles', '.*')
     ->name('nomenclatura.index');
+    
+    Route::get('/nomenclatura-excel/{niveles?}', [NomenclaturaController::class, 'exportarExcel'])
+    ->where('niveles', '.*')
+    ->name('nomenclatura.exportarExcel');
+
+    Route::get('/nomenclatura-pdf/{niveles?}', [NomenclaturaController::class, 'exportarPDF'])
+    ->where('niveles', '.*')
+    ->name('nomenclatura.exportarPDF');
+
+
+   
+Route::get('/buscar-vacante', [BuscarVacanteController::class, 'index'])->name('buscar.vacante');
+Route::get('/buscar-vacante/filtrar', [BuscarVacanteController::class, 'filtrar'])->name('buscar.vacante.filtrar');
+Route::get('/usuarios/sin-asignacion', [BuscarVacanteController::class, 'usuariosSinAsignacion'])->name('usuarios.sin_asignacion');
+
 });
 

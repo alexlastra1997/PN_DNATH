@@ -17,4 +17,6 @@ class Cargo extends Model
         'tecnico_minimo',
         'tecnico_maximo',
     ];
+        protected $table = 'cargos';
+
 }

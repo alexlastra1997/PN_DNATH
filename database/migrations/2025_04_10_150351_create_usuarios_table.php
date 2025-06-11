@@ -34,7 +34,6 @@ return new class extends Migration
         $table->string('fecha_pase_actual')->nullable();
         $table->string('tiempo_ultimo_pase')->nullable();
         $table->string('fecha_actual')->nullable();
-        $table->string('tiempo_pase_formula')->nullable();
         $table->string('fecha_presentacion')->nullable();
         $table->string('servicio_grupal')->nullable();
         $table->text('domicilio')->nullable();
@@ -63,6 +62,10 @@ return new class extends Migration
         $table->text('fecha_efectivo')->nullable();
         $table->text('nomeclatura_efectivo')->nullable();
         $table->text('tipo_efectivo')->nullable();
+        $table->text('Subsistema_efectivo')->nullable();
+        $table->text('fecha_territorio_efectivo')->nullable();
+        $table->text('nomenclatura_territorio_efectivo')->nullable();
+        $table->text('estado_territorio_efectivo')->nullable();
         $table->text('designaciones')->nullable();
         $table->text('maternidad')->nullable();
         $table->text('proyeccion_licencia')->nullable();
