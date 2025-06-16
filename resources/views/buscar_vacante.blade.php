@@ -3,18 +3,7 @@
 @section('content')
 <div class="space-y-8 px-4">
 
-    <!-- CARDS SUPERIORES -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <a href="#tabla_ocupadas" class="block p-6 bg-white rounded-xl shadow hover:bg-blue-50 transition">
-            <h2 class="text-lg font-bold text-gray-700">Vacantes Ocupadas</h2>
-            <p class="text-4xl font-bold text-blue-600 mt-2">{{ $usuarios->total() }}</p>
-        </a>
-
-        <a href="#tabla_vacantes" class="block p-6 bg-white rounded-xl shadow hover:bg-green-50 transition">
-            <h2 class="text-lg font-bold text-gray-700">Vacantes Libres</h2>
-            <p class="text-4xl font-bold text-green-600 mt-2">{{ $vacantes->total() }}</p>
-        </a>
-    </div>
+    
 
     <!-- FILTROS -->
     <form method="GET" action="{{ route('buscar.vacante.filtrar') }}" class="bg-white p-4 rounded shadow space-y-4">
@@ -74,6 +63,19 @@
             <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Buscar Vacante</button>
         </div>
     </form>
+
+    <!-- CARDS SUPERIORES -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <a href="#tabla_ocupadas" class="block p-6 bg-white rounded-xl shadow hover:bg-blue-50 transition">
+            <h2 class="text-lg font-bold text-gray-700">Vacantes Ocupadas</h2>
+            <p class="text-4xl font-bold text-blue-600 mt-2">{{ $usuarios->total() }}</p>
+        </a>
+
+        <a href="#tabla_vacantes" class="block p-6 bg-white rounded-xl shadow hover:bg-green-50 transition">
+            <h2 class="text-lg font-bold text-gray-700">Vacantes Libres</h2>
+            <p class="text-4xl font-bold text-green-600 mt-2">{{ $vacantes->total() }}</p>
+        </a>
+    </div>
 
     <!-- TABLA OCUPADAS -->
     <div id="tabla_ocupadas">

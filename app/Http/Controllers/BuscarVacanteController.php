@@ -38,7 +38,7 @@ class BuscarVacanteController extends Controller
         }
 
         // ---------- Usuarios Ocupando ----------
-        $usuarios = (clone $filtroBase)->paginate(10);
+        $usuarios = (clone $filtroBase)->paginate(0);
 
         // ---------- Emparejar con reporte_organico ----------
         $organicos = DB::table('reporte_organico')->get();

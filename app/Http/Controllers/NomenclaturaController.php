@@ -10,7 +10,6 @@ use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\CargosExport;
 use Barryvdh\DomPDF\Facade\Pdf as PDF;
 
-
 class NomenclaturaController extends Controller
 {
     public function nomenclatura(Request $request, $niveles = null)
@@ -57,7 +56,7 @@ class NomenclaturaController extends Controller
 
         // PAGINACIÓN
         $currentPage = LengthAwarePaginator::resolveCurrentPage();
-        $perPage = 50; // cantidad de registros por página
+        $perPage = 50;
         $collection = collect($registrosCoincidentes);
         $currentPageItems = $collection->slice(($currentPage - 1) * $perPage, $perPage)->values();
         $paginator = new LengthAwarePaginator(
@@ -71,17 +70,17 @@ class NomenclaturaController extends Controller
         return view('organico_nomenclatura', [
             'nombresCards' => $nombresCards,
             'niveles' => $niveles,
-            'registrosCoincidentes' => $paginator, // 👈 aquí
+            'registrosCoincidentes' => $paginator,
             'conteoGrados' => $conteoGrados
         ]);
     }
 
     public function exportarExcel(Request $request, $niveles = null)
-{
-    return Excel::download(new CargosExport($niveles), 'cargos.xlsx');
-}
+    {
+        return Excel::download(new CargosExport($niveles), 'cargos.xlsx');
+    }
 
-public function exportarPDF(Request $request, $niveles = null)
+    public function exportarPDF(Request $request, $niveles = null)
 {
     $niveles = $niveles ? explode('/', urldecode($niveles)) : [];
     $nivelActual = count($niveles);
@@ -90,21 +89,15 @@ public function exportarPDF(Request $request, $niveles = null)
         ->select('id', 'nomenclatura', 'funcion', 'tipo_personal', 'cantidad_ideal', 'grado')
         ->get();
 
-    // 👉 Traemos todos los usuarios de una vez
     $usuarios = DB::table('usuarios')
-        ->select(
-            DB::raw('TRIM(BOTH "-" FROM TRIM(nomeclatura_efectivo)) AS nomeclatura_efectivo'),
-            'grado',
-            'cedula',
-            'apellidos_nombres'
-        )
+        ->select(DB::raw('TRIM(BOTH "-" FROM TRIM(nomeclatura_efectivo)) AS nomeclatura_efectivo'), 'grado', 'cedula', 'apellidos_nombres')
         ->get()
         ->groupBy(function ($usuario) {
-            return $usuario->nomeclatura_efectivo . '|' . $usuario->grado; // clave compuesta nomenclatura|grado
+            return $usuario->nomeclatura_efectivo . '|' . $usuario->grado;
         });
 
     $registrosCoincidentes = [];
-   
+    $resagados = [];
 
     foreach ($registros as $registro) {
         $partes = explode('-', trim($registro->nomenclatura, '-'));
@@ -115,31 +108,51 @@ public function exportarPDF(Request $request, $niveles = null)
                 break;
             }
         }
+
         if ($coincide) {
             $nomenclaturaLimpia = trim(rtrim($registro->nomenclatura, '-'));
-
-            if (!empty($nomenclaturaLimpia)) {
-                $clave = $nomenclaturaLimpia . '|' . $registro->grado;
-                $usuariosCoincidentes = isset($usuarios[$clave]) ? $usuarios[$clave] : collect();
-                $efectivo = $usuariosCoincidentes->count();
-            } else {
-                $usuariosCoincidentes = collect();
-                $efectivo = 0;
-            }
-
-            $registro->efectivo = $efectivo;
-            $registro->usuarios = $usuariosCoincidentes; // 👈 guardamos la lista de usuarios
-
+            $clave = $nomenclaturaLimpia . '|' . $registro->grado;
+            $usuariosCoincidentes = isset($usuarios[$clave]) ? $usuarios[$clave] : collect();
+            $registro->cantidad_efectiva = $usuariosCoincidentes->count();
+            $registro->usuarios = $usuariosCoincidentes;
+            $registro->diferencia = $registro->cantidad_efectiva - $registro->cantidad_ideal;
+            $registro->color = $registro->diferencia === 0 ? 'verde' : ($registro->diferencia < 0 ? 'amarillo' : 'rojo');
             $registrosCoincidentes[] = $registro;
         }
     }
 
-    $pdf = PDF::loadView('exports.cargos-pdf', ['registros' => $registrosCoincidentes]);
+    // RESAGADOS
+    $usuariosTodos = DB::table('usuarios')
+        ->select('cedula', 'apellidos_nombres', 'grado', 'nomeclatura_efectivo')
+        ->whereNotNull('nomeclatura_efectivo')
+        ->get();
+
+    $cargosEsperados = DB::table('reporte_organico')
+        ->select('grado', 'nomenclatura')
+        ->where(function($q) use ($niveles) {
+            foreach ($niveles as $i => $nivel) {
+                $q->whereRaw("SUBSTRING_INDEX(SUBSTRING_INDEX(nomenclatura, '-', ? + 1), '-', -1) = ?", [$i, $nivel]);
+            }
+        })
+        ->get();
+
+    $gradosEsperados = $cargosEsperados->pluck('grado')->unique()->toArray();
+
+    $resagados = $usuariosTodos->filter(function ($usuario) use ($niveles, $gradosEsperados) {
+        $partes = explode('-', trim($usuario->nomeclatura_efectivo, '-'));
+        foreach ($niveles as $i => $nivel) {
+            if (!isset($partes[$i]) || $partes[$i] !== $nivel) {
+                return false;
+            }
+        }
+        return !in_array($usuario->grado, $gradosEsperados);
+    });
+
+    $pdf = PDF::loadView('exports.cargos-pdf', [
+        'registros' => $registrosCoincidentes,
+        'resagados' => $resagados
+    ]);
 
     return $pdf->download('cargos.pdf');
 }
-
-
-
-
 }
