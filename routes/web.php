@@ -13,6 +13,7 @@ use App\Http\Controllers\NomenclaturaController;
 use App\Http\Controllers\OrganicoEfectivoController;
 use App\Http\Controllers\ProvinciaController;
 use App\Http\Controllers\ReporteOrganicoController;
+use App\Http\Controllers\TrasladoController;
 
 // Login
 // Muestra el formulario de login
@@ -88,9 +89,12 @@ Route::middleware('auth')->group(function () {
 
 
    
-Route::get('/buscar-vacante', [BuscarVacanteController::class, 'index'])->name('buscar.vacante');
-Route::get('/buscar-vacante/filtrar', [BuscarVacanteController::class, 'filtrar'])->name('buscar.vacante.filtrar');
-Route::get('/usuarios/sin-asignacion', [BuscarVacanteController::class, 'usuariosSinAsignacion'])->name('usuarios.sin_asignacion');
+Route::get('/traslados', [TrasladoController::class, 'index'])->name('traslados.index');
+Route::post('/traslados/procesar', [TrasladoController::class, 'procesar'])->name('traslados.procesar');
 
+// Redirección si alguien accede a la ruta POST con GET
+Route::get('/traslados/procesar', function () {
+    return redirect()->route('traslados.index');
+});
 });
 
