@@ -1,11 +1,6 @@
-<!-- resources/views/traslados/index.blade.php -->
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <title>Traslados Aleatorios</title>
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-</head>
+@extends('layouts.app')
+
+@section('content')
 <body class="bg-gray-100">
     <div class="max-w-xl mx-auto mt-10 bg-white p-6 rounded shadow">
         <h1 class="text-2xl font-bold mb-4">Subir archivos de traslado</h1>
@@ -28,4 +23,4 @@
         </form>
     </div>
 </body>
-</html>
+@endsection
