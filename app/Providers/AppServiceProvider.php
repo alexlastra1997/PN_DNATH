@@ -25,6 +25,7 @@ class AppServiceProvider extends ServiceProvider
     public function boot()
     {
             Paginator::useTailwind();
+            ini_set('memory_limit', env('MEMORY_LIMIT', '1024M'));
     }
 
  
