@@ -193,10 +193,10 @@
                                         </div>
                         
                                         <div>
-                                            <label for="unidad" class="block text-sm font-medium text-gray-700 dark:text-gray-200">Unidad</label>
-                                            <select name="unidad" id="unidad" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500">>
+                                            <label for="nomenclatura_territorio_efectivo" class="block text-sm font-medium text-gray-700 dark:text-gray-200">Unidad</label>
+                                            <select name="nomenclatura_territorio_efectivo" id="nomenclatura_territorio_efectivo" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500">>
                                                 <option value="">-- Todos --</option>
-                                                @foreach($unidad as $uni)
+                                                @foreach($nomenclatura_territorio_efectivo as $uni)
                                                     <option value="{{ $uni }}" {{ request('estado_civil') == $uni ? 'selected' : '' }}>
                                                         {{ $uni }}
                                                     </option>

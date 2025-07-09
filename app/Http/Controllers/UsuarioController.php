@@ -29,12 +29,12 @@ class UsuarioController extends Controller
             $search = $request->input('search');
             $query->where(function ($q) use ($search) {
                 $q->where('cedula', 'like', '%' . $search . '%')
-                    ->orWhere('funcion', 'like', '%' . $search . '%')
+                    // ->orWhere('funcion', 'like', '%' . $search . '%')
                     ->orWhere('apellidos_nombres', 'like', '%' . $search . '%')
                     ->orWhere('titulos', 'like', '%' . $search . '%')
                     ->orWhere('titulos_senescyt', 'like', '%' . $search . '%')
-                    ->orWhere('capacitacion', 'like', '%' . $search . '%')
-                    ->orWhere('servicio_grupal', 'like', '%' . $search . '%');
+                    ->orWhere('capacitacion', 'like', '%' . $search . '%');
+                    // ->orWhere('servicio_grupal', 'like', '%' . $search . '%');
             });
         }
 
@@ -72,8 +72,8 @@ class UsuarioController extends Controller
             $query->where('estado_civil', $request->estado_civil);
         }
 
-        if ($request->filled('unidad')) {
-            $query->where('unidad', $request->unidad);
+        if ($request->filled('nomenclatura_territorio_efectivo')) {
+            $query->where('nomenclatura_territorio_efectivo', $request->nomenclatura_territorio_efectivo);
         }
 
         if ($request->filled('cdg_promocion')) {
@@ -150,7 +150,7 @@ class UsuarioController extends Controller
         $sexo = Usuario::select('sexo')->distinct()->pluck('sexo');
         $hijos_menor_igual_18 = Usuario::select('hijos_menor_igual_18')->distinct()->pluck('hijos_menor_igual_18');
         $estado_civil = Usuario::select('estado_civil')->distinct()->whereNotNull('estado_civil')->orderBy('estado_civil')->pluck('estado_civil');
-        $unidad = Usuario::select('unidad')->distinct()->whereNotNull('unidad')->orderBy('unidad')->pluck('unidad');
+        $nomenclatura_territorio_efectivo = Usuario::select('nomenclatura_territorio_efectivo')->distinct()->whereNotNull('nomenclatura_territorio_efectivo')->orderBy('nomenclatura_territorio_efectivo')->pluck('nomenclatura_territorio_efectivo');
         $cdg_promocion = Usuario::select('cdg_promocion')->distinct()->whereNotNull('cdg_promocion')->orderBy('cdg_promocion')->pluck('cdg_promocion');
         $grado = Usuario::select('grado')->distinct()->whereNotNull('grado')->pluck('grado');
         $cuadro_policial = Usuario::select('cuadro_policial')->distinct()->whereNotNull('cuadro_policial')->orderBy('cuadro_policial')->pluck('cuadro_policial');
@@ -162,7 +162,7 @@ class UsuarioController extends Controller
         return view('usuarios.index', compact(
             'usuarios',
             'estado_civil',
-            'unidad',
+            'nomenclatura_territorio_efectivo',
             'cdg_promocion',
             'provincia_trabaja',
             'provincia_vive',
@@ -251,8 +251,8 @@ class UsuarioController extends Controller
             $query->where('estado_civil', $request->estado_civil);
         }
 
-        if ($request->filled('unidad')) {
-            $query->where('unidad', $request->unidad);
+        if ($request->filled('nomenclatura_territorio_efectivo')) {
+            $query->where('nomenclatura_territorio_efectivo', $request->nomenclatura_territorio_efectivo);
         }
 
         if ($request->filled('cdg_promocion')) {
@@ -488,6 +488,143 @@ class UsuarioController extends Controller
             ->download('reporte_factibilidad.pdf');
     }
 
+    public function opciones()
+    {
+        return view('usuarios.opciones');
+    }
+
+public function masivo(Request $request)
+{
+    $request->validate([
+        'archivo' => 'required|mimes:xlsx,xls'
+    ]);
+
+    $archivo = $request->file('archivo');
+
+    $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($archivo);
+    $hoja = $spreadsheet->getActiveSheet();
+
+    $filas = $hoja->toArray();
+
+    $cedulas = [];
+    foreach($filas as $fila) {
+        if (!empty($fila[0])) {
+            $cedulas[] = trim($fila[0]);
+        }
+    }
+
+    $usuarios = \App\Models\Usuario::whereIn('cedula', $cedulas)->get();
+
+    $estados_civiles = \App\Models\Usuario::select('estado_civil')
+        ->distinct()
+        ->pluck('estado_civil');
+
+    $promociones = \App\Models\Usuario::select('promocion')
+        ->distinct()
+        ->pluck('promocion');
+
+    return view('usuarios.resultado', compact('usuarios', 'estados_civiles', 'promociones'));
+}
+
+public function filtrarProvincia(Request $request)
+{
+    $cedulas = explode(',', $request->input('cedulas_filtradas'));
+    $provincia = $request->input('provincia_trabaja');
+    $alerta = $request->input('alerta');
+    $promocionesSeleccionadas = $request->input('promocion');
+
+    $priorizados = [
+        'PASCUALES', 'NUEVA PROSPERINA', 'DURAN', 'MACHALA', 'MANTA', 'BABAHOYO',
+        'SUR DMG', 'PORTOVIEJO', 'DAULE', 'PORTETE', 'ESTEROS', 'QUEVEDO', 'PASAJE',
+        '9 DE OCTUBRE', 'LIBERTAD SALINAS', 'ESMERALDAS', 'MODELO', 'FLORIDA',
+        'EUGENIO ESPEJO', 'NARANJAL BALAO', 'BUENA FE', 'HUAQUILLAS', 'ELOY ALFARO',
+        'LA DELICIA', 'PUEBLOVIEJO', 'VINCES', 'LAGO AGRIO', 'PLAYAS', 'STA ELENA',
+        'QUITUMBE'
+    ];
+
+    $query = \App\Models\Usuario::whereIn('cedula', $cedulas);
+
+    if ($provincia) {
+        $query->where('provincia_trabaja', $provincia);
+    }
+
+    if ($alerta === 'SI') {
+        $query->whereNotNull('alertas');
+    } elseif ($alerta === 'NO') {
+        $query->whereNull('alertas');
+    }
+
+    if ($request->input('contrato_estudios') === 'SI') {
+        $query->whereNotNull('contrato_estudios');
+    } elseif ($request->input('contrato_estudios') === 'NO') {
+        $query->whereNull('contrato_estudios');
+    }
+
+    if ($request->input('conyuge_policia_activo') === 'SI') {
+        $query->whereNotNull('conyuge_policia_activo');
+    } elseif ($request->input('conyuge_policia_activo') === 'NO') {
+        $query->whereNull('conyuge_policia_activo');
+    }
+
+    if ($request->input('enf_catast_sp') === 'SI') {
+        $query->whereNotNull('enf_catast_sp');
+    } elseif ($request->input('enf_catast_sp') === 'NO') {
+        $query->whereNull('enf_catast_sp');
+    }
+
+    if ($request->input('enf_catast_conyuge_hijos') === 'SI') {
+        $query->whereNotNull('enf_catast_conyuge_hijos');
+    } elseif ($request->input('enf_catast_conyuge_hijos') === 'NO') {
+        $query->whereNull('enf_catast_conyuge_hijos');
+    }
+
+    if ($request->input('discapacidad_sp') === 'SI') {
+        $query->whereNotNull('discapacidad_sp');
+    } elseif ($request->input('discapacidad_sp') === 'NO') {
+        $query->whereNull('discapacidad_sp');
+    }
+
+    if ($request->input('discapacidad_conyuge_hijos') === 'SI') {
+        $query->whereNotNull('discapacidad_conyuge_hijos');
+    } elseif ($request->input('discapacidad_conyuge_hijos') === 'NO') {
+        $query->whereNull('discapacidad_conyuge_hijos');
+    }
+
+    if ($request->filled('estado_civil')) {
+        $query->where('estado_civil', $request->input('estado_civil'));
+    }
+
+    if (!empty($promocionesSeleccionadas)) {
+        $query->whereIn('promocion', $promocionesSeleccionadas);
+    }
+
+    $sitio_priorizado = $request->input('sitio_priorizado');
+    if ($sitio_priorizado === 'SI') {
+        $query->where(function($q) use ($priorizados) {
+            foreach ($priorizados as $palabra) {
+                $q->orWhere('nomenclatura_territorio_efectivo', 'like', "%{$palabra}%");
+            }
+        });
+    } elseif ($sitio_priorizado === 'NO') {
+        $query->where(function($q) use ($priorizados) {
+            foreach ($priorizados as $palabra) {
+                $q->where('nomenclatura_territorio_efectivo', 'not like', "%{$palabra}%");
+            }
+        });
+    }
+
+    $aptos = $query->get();
+
+    $estados_civiles = \App\Models\Usuario::select('estado_civil')
+        ->distinct()
+        ->pluck('estado_civil');
+
+    $promociones = \App\Models\Usuario::select('promocion')
+        ->distinct()
+        ->pluck('promocion');
+
+    return view('usuarios.aptos', compact('aptos', 'estados_civiles', 'promociones'));
+}
 
 
    

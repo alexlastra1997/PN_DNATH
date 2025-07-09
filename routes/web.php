@@ -9,6 +9,7 @@ use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\BuscarVacanteController;
 use App\Http\Controllers\CargoController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DethaController;
 use App\Http\Controllers\NomenclaturaController;
 use App\Http\Controllers\OrganicoEfectivoController;
 use App\Http\Controllers\ProvinciaController;
@@ -89,12 +90,24 @@ Route::middleware('auth')->group(function () {
 
 
    
-Route::get('/traslados', [TrasladoController::class, 'index'])->name('traslados.index');
-Route::post('/traslados/procesar', [TrasladoController::class, 'procesar'])->name('traslados.procesar');
+    Route::get('/traslados', [TrasladoController::class, 'index'])->name('traslados.index');
+    Route::post('/traslados/procesar', [TrasladoController::class, 'procesar'])->name('traslados.procesar');
 
-// Redirección si alguien accede a la ruta POST con GET
-Route::get('/traslados/procesar', function () {
-    return redirect()->route('traslados.index');
-});
+    // Redirección si alguien accede a la ruta POST con GET
+    Route::get('/traslados/procesar', function () {
+        return redirect()->route('traslados.index');
+    });
+
+    Route::get('/detha', [DethaController::class, 'index'])->name('detha.index');
+    Route::get('/detha/{id}', [DethaController::class, 'show'])->name('detha.show');
+    Route::get('/detha/{id}/edit', [DethaController::class, 'edit'])->name('detha.edit');
+    Route::post('/detha/{id}/update', [DethaController::class, 'update'])->name('detha.update');
+
+
+    Route::get('/opciones', [UsuarioController::class, 'opciones'])->name('opciones');
+    Route::post('/usuarios/masivo', [UsuarioController::class, 'masivo'])->name('usuarios.masivo');
+    Route::post('/usuarios/filtrarAvanzado', [UsuarioController::class, 'filtrarAvanzado'])->name('usuarios.filtrarAvanzado');
+
+    
 });
 
