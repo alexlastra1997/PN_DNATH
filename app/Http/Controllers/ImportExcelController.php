@@ -15,6 +15,10 @@ class ImportExcelController extends Controller
             'archivo' => 'required|mimes:xlsx,xls'
         ]);
 
+           // Ajuste para evitar errores de tiempo y memoria
+            ini_set('max_execution_time', 0); // sin límite de tiempo
+            ini_set('memory_limit', '-1');    // sin límite de memoria
+
         Excel::import(new UsuariosImport, $request->file('archivo'));
 
         return back()->with('success', 'Datos importados correctamente.');
