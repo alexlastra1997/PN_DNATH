@@ -131,7 +131,7 @@
         </button>
     </div>
         </form>
-        <a href="">a</a>
+        
         <!-- TABLA DE RESULTADOS -->
         <table class="min-w-full border text-xs">
             <thead>

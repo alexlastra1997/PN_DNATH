@@ -12,6 +12,9 @@ class UsuariosImport implements ToCollection, WithHeadingRow, WithChunkReading
 {
     public function collection(Collection $rows)
     {
+            ini_set('max_execution_time', 0); // Sin límite de tiempo
+            ini_set('memory_limit', '-1');    // Sin límite de memoria
+
         foreach ($rows as $row) {
              DB::table('usuarios')->updateOrInsert(
                 ['cedula' => $row['cedula']], // clave única para identificar
