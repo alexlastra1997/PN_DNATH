@@ -1,28 +1,21 @@
 <?php
-
 namespace App\Imports;
 
 use App\Models\ReporteOrganico;
 use Maatwebsite\Excel\Concerns\ToModel;
+use Maatwebsite\Excel\Concerns\WithHeadingRow;
 
-class ReporteOrganicoImport implements ToModel
+class ReporteOrganicoImport implements ToModel, WithHeadingRow
 {
     public function model(array $row)
     {
-        // Saltar encabezado si detectas strings como "Unidad"
-        if (strtolower($row[0]) === 'unidad') {
-            return null;
-        }
-
         return new ReporteOrganico([
-            'unidad'          => $row[0],
-            'nomenclatura'    => $row[1],
-            'grado'           => $row[2],
-            'funcion'         => $row[3],
-            'tipo_personal'   => $row[4],
-            'cantidad_ideal'  => (int) $row[5],
-            'cantidad_real'   => (int) $row[6],
-            'diferencia'      => (int) $row[7],
+            'servicio_organico'       => $row['servicio_organico'] ?? null,
+            'nomenclatura_organico'   => $row['nomenclatura_organico'] ?? null,
+            'cargo_organico'          => $row['cargo_organico'] ?? null,
+            'grado_organico'          => $row['grado_organico'] ?? null,
+            'personal_organico'       => $row['personal_organico'] ?? null,
+            'numero_organico_ideal'   => $row['numero_organico_ideal'] ?? null,
         ]);
     }
 }

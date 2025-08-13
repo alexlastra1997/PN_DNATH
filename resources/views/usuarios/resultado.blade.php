@@ -1,164 +1,165 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="container mx-auto p-4">
-    <h2 class="text-xl font-bold mb-4">Usuarios encontrados</h2>
+<div class="p-4 space-y-6">
+    <h2 class="text-xl font-bold">Resultados</h2>
 
-    @if($usuarios->count())
+    {{-- Filtros --}}
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+       
 
-        <!-- FORMULARIO DE FILTRO CON BOTÓN -->
-        <form action="{{ route('usuarios.filtrarProvincia') }}" method="POST" class="mb-4 border p-4 rounded shadow space-y-2">
-            @csrf
-            <input type="hidden" name="cedulas_filtradas" value="{{ implode(',', $usuarios->pluck('cedula')->toArray()) }}">
+        <select name="alerta" class="filtro border p-1 rounded">
+            <option value="">¿Tiene alerta?</option>
+            <option value="SI">SI</option>
+            <option value="NO">NO</option>
+        </select>
 
-             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <select name="estado_civil" class="filtro border p-1 rounded">
+            <option value="">Estado Civil</option>
+            @foreach($estados_civiles as $ec)
+                <option value="{{ $ec }}">{{ $ec }}</option>
+            @endforeach
+        </select>
 
-                        <!-- provincia -->
-        <div>
-            <label class="block text-sm font-medium text-gray-700">Provincia</label>
-            <input type="text" name="provincia_trabaja" value="{{ request('provincia_trabaja') }}" class="mt-1 block w-full border rounded p-2 text-sm">
-        </div>
+        <select name="sitio_priorizado" class="filtro border p-1 rounded">
+            <option value="">¿Sitio Priorizado?</option>
+            <option value="SI">SI</option>
+            <option value="NO">NO</option>
+        </select>
 
-        <!-- alertas -->
-        <div>
-            <label class="block text-sm font-medium text-gray-700">Alertas</label>
-            <select name="alerta" class="mt-1 block w-full border rounded p-2 text-sm">
-                <option value="">-- Todos --</option>
-                <option value="SI" {{ request('alerta') == 'SI' ? 'selected' : '' }}>SI</option>
-                <option value="NO" {{ request('alerta') == 'NO' ? 'selected' : '' }}>NO</option>
+        @foreach(['contrato_estudios', 'conyuge_policia_activo', 'enf_catast_sp', 'enf_catast_conyuge_hijos', 'discapacidad_sp', 'discapacidad_conyuge_hijos'] as $campo)
+            <select name="{{ $campo }}" class="filtro border p-1 rounded">
+                <option value="">{{ ucwords(str_replace('_', ' ', $campo)) }}</option>
+                <option value="SI">SI</option>
+                <option value="NO">NO</option>
             </select>
-        </div>
+        @endforeach
 
-        <!-- contrato_estudios -->
-        <div>
-            <label class="block text-sm font-medium text-gray-700">Contrato de estudios</label>
-            <select name="contrato_estudios" class="mt-1 block w-full border rounded p-2 text-sm">
-                <option value="">-- Todos --</option>
-                <option value="SI" {{ request('contrato_estudios') == 'SI' ? 'selected' : '' }}>SI</option>
-                <option value="NO" {{ request('contrato_estudios') == 'NO' ? 'selected' : '' }}>NO</option>
-            </select>
-        </div>
-
-        <!-- conyuge_policia_activo -->
-        <div>
-            <label class="block text-sm font-medium text-gray-700">Cónyuge policía activo</label>
-            <select name="conyuge_policia_activo" class="mt-1 block w-full border rounded p-2 text-sm">
-                <option value="">-- Todos --</option>
-                <option value="SI" {{ request('conyuge_policia_activo') == 'SI' ? 'selected' : '' }}>SI</option>
-                <option value="NO" {{ request('conyuge_policia_activo') == 'NO' ? 'selected' : '' }}>NO</option>
-            </select>
-        </div>
-
-        <!-- enf_catast_sp -->
-        <div>
-            <label class="block text-sm font-medium text-gray-700">Enf. catastrófica SP</label>
-            <select name="enf_catast_sp" class="mt-1 block w-full border rounded p-2 text-sm">
-                <option value="">-- Todos --</option>
-                <option value="SI" {{ request('enf_catast_sp') == 'SI' ? 'selected' : '' }}>SI</option>
-                <option value="NO" {{ request('enf_catast_sp') == 'NO' ? 'selected' : '' }}>NO</option>
-            </select>
-        </div>
-
-        <!-- enf_catast_conyuge_hijos -->
-        <div>
-            <label class="block text-sm font-medium text-gray-700">Enf. catastrófica cónyuge/hijos</label>
-            <select name="enf_catast_conyuge_hijos" class="mt-1 block w-full border rounded p-2 text-sm">
-                <option value="">-- Todos --</option>
-                <option value="SI" {{ request('enf_catast_conyuge_hijos') == 'SI' ? 'selected' : '' }}>SI</option>
-                <option value="NO" {{ request('enf_catast_conyuge_hijos') == 'NO' ? 'selected' : '' }}>NO</option>
-            </select>
-        </div>
-
-        <!-- discapacidad_sp -->
-        <div>
-            <label class="block text-sm font-medium text-gray-700">Discapacidad SP</label>
-            <select name="discapacidad_sp" class="mt-1 block w-full border rounded p-2 text-sm">
-                <option value="">-- Todos --</option>
-                <option value="SI" {{ request('discapacidad_sp') == 'SI' ? 'selected' : '' }}>SI</option>
-                <option value="NO" {{ request('discapacidad_sp') == 'NO' ? 'selected' : '' }}>NO</option>
-            </select>
-        </div>
-
-        <!-- discapacidad_conyuge_hijos -->
-        <div>
-            <label class="block text-sm font-medium text-gray-700">Discapacidad cónyuge/hijos</label>
-            <select name="discapacidad_conyuge_hijos" class="mt-1 block w-full border rounded p-2 text-sm">
-                <option value="">-- Todos --</option>
-                <option value="SI" {{ request('discapacidad_conyuge_hijos') == 'SI' ? 'selected' : '' }}>SI</option>
-                <option value="NO" {{ request('discapacidad_conyuge_hijos') == 'NO' ? 'selected' : '' }}>NO</option>
-            </select>
-        </div>
-
-        <!-- estado_civil -->
-        <div>
-            <label class="block text-sm font-medium text-gray-700">Estado civil</label>
-            <select name="estado_civil" class="mt-1 block w-full border rounded p-2 text-sm">
-                <option value="">-- Todos --</option>
-                @foreach($estados_civiles as $estado)
-                    <option value="{{ $estado }}" {{ request('estado_civil') == $estado ? 'selected' : '' }}>{{ $estado }}</option>
-                @endforeach
-            </select>
-        </div>
-
-        <!-- promocion (multi) -->
-        <div>
-            <label class="block text-sm font-medium text-gray-700">Promoción</label>
-            <select name="promocion[]" multiple class="mt-1 block w-full border rounded p-2 text-sm">
+        <div class="col-span-2">
+            <label for="promocion" class="block text-sm font-bold mb-1">Promoción</label>
+            <select name="promocion[]" id="promocion" multiple class="filtro border p-1 rounded w-full">
                 @foreach($promociones as $promo)
-                    <option value="{{ $promo }}" {{ collect(request('promocion'))->contains($promo) ? 'selected' : '' }}>
-                        {{ $promo }}
-                    </option>
+                    <option value="{{ $promo }}">{{ $promo }}</option>
                 @endforeach
-            </select>
-            <small class="text-xs text-gray-500">Usa Ctrl o Cmd para elegir varias opciones</small>
-        </div>
-
-        <!-- sitio priorizado -->
-        <div>
-            <label class="block text-sm font-medium text-gray-700">Sitio priorizado</label>
-            <select name="sitio_priorizado" class="mt-1 block w-full border rounded p-2 text-sm">
-                <option value="">-- Todos --</option>
-                <option value="SI" {{ request('sitio_priorizado') == 'SI' ? 'selected' : '' }}>SI</option>
-                <option value="NO" {{ request('sitio_priorizado') == 'NO' ? 'selected' : '' }}>NO</option>
             </select>
         </div>
 
-    </div>
-
-    <div class="mt-4 flex justify-end">
-        <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded shadow">
-            Filtrar
-        </button>
-    </div>
-        </form>
-        
-        <!-- TABLA DE RESULTADOS -->
-        <table class="min-w-full border text-xs">
-            <thead>
-                <tr class="bg-gray-200">
-                    <th class="border px-2 py-1">Cédula</th>
-                    <th class="border px-2 py-1">Grado</th>
-                    <th class="border px-2 py-1">Nombre</th>
-                    <th class="border px-2 py-1">Unidad</th>
-                    <th class="border px-2 py-1">Función</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach($usuarios as $usuario)
-                    <tr>
-                        <td class="border px-2 py-1">{{ $usuario->cedula }}</td>
-                        <td class="border px-2 py-1">{{ $usuario->grado}}</td>
-                        <td class="border px-2 py-1">{{ $usuario->apellidos_nombres }}</td>
-                        <td class="border px-2 py-1">{{ $usuario->nomenclatura_territorio_efectivo }}</td>
-                        <td class="border px-2 py-1">{{ $usuario->descFuncion_territorio_efectivo}}</td>
-                    </tr>
+        <div class="col-span-2">
+            <label for="provincia_trabaja" class="block text-sm font-bold mb-1">Provincias (trabaja)</label>
+            <select name="provincia_trabaja[]" id="provincia_trabaja" multiple class="filtro border p-1 rounded w-full">
+                @foreach(['AZUAY', 'BOLIVAR', 'CAÑAR', 'CARCHI', 'CHIMBORAZO', 'COTOPAXI', 'EL ORO',
+                          'ESMERALDAS', 'GALAPAGOS', 'GUAYAS', 'IMBABURA', 'LOJA', 'LOS RIOS', 'MANABI',
+                          'MORONA SANTIAGO', 'NAPO', 'ORELLANA', 'PASTAZA', 'PICHINCHA', 'SANTA ELENA',
+                          'STO DOMINGO TSACHILAS', 'SUCUMBIOS', 'TUNGURAHUA', 'ZAMORA CHINCHIPE'] as $prov)
+                    <option value="{{ $prov }}">{{ $prov }}</option>
                 @endforeach
-            </tbody>
-        </table>
-    @else
-        <p class="text-red-500">No se encontraron usuarios con las cédulas proporcionadas.</p>
-    @endif
+            </select>
+        </div>
 
-    <a href="{{ route('opciones') }}" class="mt-4 inline-block bg-gray-500 text-white px-4 py-2 rounded">Regresar</a>
+        <div class="col-span-2 flex space-x-4">
+            <button id="limpiar-filtros" class="bg-gray-200 text-black px-3 py-1 rounded hover:bg-gray-300 text-sm">
+                Limpiar filtros
+            </button>
+
+            <form method="POST" action="{{ route('usuarios.descargar_excel') }}" id="form-descargar">
+                @csrf
+                <input type="hidden" name="cedulas" id="cedulas_export">
+                <button type="submit" class="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700 text-sm">
+                    Descargar Excel Traslado Masivo
+                </button>
+            </form>
+        </div>
+    </div>
+
+    {{-- Tabla APTOS --}}
+    <div id="tabla-aptos" class="mt-6">
+        @include('usuarios.partials.tabla_aptos', ['aptos' => $usuarios])
+    </div>
+
+    {{-- Tabla NO APTOS --}}
+    <hr class="my-6 border-gray-400">
+    <h3 class="text-red-600 font-bold text-lg">NO APTOS</h3>
+    <div id="tabla-no-aptos"></div>
 </div>
+
+{{-- Tom Select --}}
+<link href="https://cdn.jsdelivr.net/npm/tom-select/dist/css/tom-select.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/tom-select/dist/js/tom-select.complete.min.js"></script>
+
+<script>
+    const filtros = document.querySelectorAll('.filtro');
+    const cedulas = @json($usuarios->pluck('cedula')->toArray());
+
+    new TomSelect('#promocion', {
+        plugins: ['remove_button'],
+        maxOptions: 2000,
+        placeholder: 'Selecciona promociones...'
+    });
+
+    new TomSelect('#provincia_trabaja', {
+        plugins: ['remove_button'],
+        maxOptions: 100,
+        placeholder: 'Selecciona provincias...'
+    });
+
+    filtros.forEach(f => {
+        f.addEventListener('change', () => {
+            const data = {
+                cedulas_filtradas: cedulas.join(','),
+                provincia_trabaja: Array.from(document.querySelector('[name="provincia_trabaja[]"]').selectedOptions).map(opt => opt.value),
+                alerta: document.querySelector('[name="alerta"]').value,
+                estado_civil: document.querySelector('[name="estado_civil"]').value,
+                sitio_priorizado: document.querySelector('[name="sitio_priorizado"]').value,
+                contrato_estudios: document.querySelector('[name="contrato_estudios"]').value,
+                conyuge_policia_activo: document.querySelector('[name="conyuge_policia_activo"]').value,
+                enf_catast_sp: document.querySelector('[name="enf_catast_sp"]').value,
+                enf_catast_conyuge_hijos: document.querySelector('[name="enf_catast_conyuge_hijos"]').value,
+                discapacidad_sp: document.querySelector('[name="discapacidad_sp"]').value,
+                discapacidad_conyuge_hijos: document.querySelector('[name="discapacidad_conyuge_hijos"]').value,
+                promocion: Array.from(document.querySelector('[name="promocion[]"]').selectedOptions).map(opt => opt.value),
+                _token: '{{ csrf_token() }}'
+            };
+
+            fetch("{{ route('usuarios.filtrar.ajax') }}", {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            })
+            .then(res => res.json())
+            .then(res => {
+                document.getElementById('tabla-aptos').innerHTML = res.aptos;
+                document.getElementById('tabla-no-aptos').innerHTML = res.no_aptos;
+                document.getElementById('cedulas_export').value = data.cedulas_filtradas;
+            });
+        });
+    });
+
+    document.getElementById('limpiar-filtros').addEventListener('click', () => {
+        document.querySelectorAll('.filtro').forEach(input => {
+            if (input.tagName === 'SELECT' && !input.multiple) {
+                input.selectedIndex = 0;
+            }
+            if (input.multiple) {
+                Array.from(input.options).forEach(opt => opt.selected = false);
+            }
+        });
+
+        const data = {
+            cedulas_filtradas: cedulas.join(','),
+            _token: '{{ csrf_token() }}'
+        };
+
+        fetch("{{ route('usuarios.filtrar.ajax') }}", {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        })
+        .then(res => res.json())
+        .then(res => {
+            document.getElementById('tabla-aptos').innerHTML = res.aptos;
+            document.getElementById('tabla-no-aptos').innerHTML = '';
+            document.getElementById('cedulas_export').value = data.cedulas_filtradas;
+        });
+    });
+</script>
 @endsection

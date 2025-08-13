@@ -12,13 +12,11 @@ class ReporteOrganico extends Model
     protected $table = 'reporte_organico';
 
     protected $fillable = [
-        'unidad',
-        'nomenclatura',
-        'grado',
-        'funcion',
-        'tipo_personal',
-        'cantidad_ideal',
-        'cantidad_real',
-        'diferencia',
+        'servicio_organico',
+        'nomenclatura_organico',
+        'cargo_organico',
+        'grado_organico',
+        'personal_organico',
+        'numero_organico_ideal',
     ];
 }

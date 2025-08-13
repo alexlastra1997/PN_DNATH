@@ -29,6 +29,7 @@ return new class extends Migration {
             $table->string('numero_celular')->nullable();
             $table->string('numero_celular_familiar')->nullable();
             $table->string('correo_electronico')->nullable();
+             $table->text('alerta_contra')->nullable();
         });
     }
 
@@ -57,6 +58,7 @@ return new class extends Migration {
                 'numero_celular',
                 'numero_celular_familiar',
                 'correo_electronico',
+                 'alerta_contra',
             ]);
         });
     }

@@ -11,6 +11,8 @@ use Maatwebsite\Excel\Facades\Excel;
 use Barryvdh\DomPDF\Facade\Pdf as PDF;
 use Illuminate\Support\Facades\DB;
 use App\Models\Alerta;
+use PhpOffice\PhpSpreadsheet\IOFactory;
+
 
 
 class UsuarioController extends Controller
@@ -72,8 +74,8 @@ class UsuarioController extends Controller
             $query->where('estado_civil', $request->estado_civil);
         }
 
-        if ($request->filled('nomenclatura_territorio_efectivo')) {
-            $query->where('nomenclatura_territorio_efectivo', $request->nomenclatura_territorio_efectivo);
+        if ($request->filled('nomenclatura_efectiva')) {
+            $query->where('nomenclatura_efectiva', $request->nomenclatura_efectiva);
         }
 
         if ($request->filled('cdg_promocion')) {
@@ -150,7 +152,7 @@ class UsuarioController extends Controller
         $sexo = Usuario::select('sexo')->distinct()->pluck('sexo');
         $hijos_menor_igual_18 = Usuario::select('hijos_menor_igual_18')->distinct()->pluck('hijos_menor_igual_18');
         $estado_civil = Usuario::select('estado_civil')->distinct()->whereNotNull('estado_civil')->orderBy('estado_civil')->pluck('estado_civil');
-        $nomenclatura_territorio_efectivo = Usuario::select('nomenclatura_territorio_efectivo')->distinct()->whereNotNull('nomenclatura_territorio_efectivo')->orderBy('nomenclatura_territorio_efectivo')->pluck('nomenclatura_territorio_efectivo');
+        $nomenclatura_efectiva = Usuario::select('nomenclatura_efectiva')->distinct()->whereNotNull('nomenclatura_efectiva')->orderBy('nomenclatura_efectiva')->pluck('nomenclatura_efectiva');
         $cdg_promocion = Usuario::select('cdg_promocion')->distinct()->whereNotNull('cdg_promocion')->orderBy('cdg_promocion')->pluck('cdg_promocion');
         $grado = Usuario::select('grado')->distinct()->whereNotNull('grado')->pluck('grado');
         $cuadro_policial = Usuario::select('cuadro_policial')->distinct()->whereNotNull('cuadro_policial')->orderBy('cuadro_policial')->pluck('cuadro_policial');
@@ -162,7 +164,7 @@ class UsuarioController extends Controller
         return view('usuarios.index', compact(
             'usuarios',
             'estado_civil',
-            'nomenclatura_territorio_efectivo',
+            'nomenclatura_efectiva',
             'cdg_promocion',
             'provincia_trabaja',
             'provincia_vive',
@@ -251,8 +253,8 @@ class UsuarioController extends Controller
             $query->where('estado_civil', $request->estado_civil);
         }
 
-        if ($request->filled('nomenclatura_territorio_efectivo')) {
-            $query->where('nomenclatura_territorio_efectivo', $request->nomenclatura_territorio_efectivo);
+        if ($request->filled('nomenclatura_efectiva')) {
+            $query->where('nomenclatura_efectiva', $request->nomenclatura_efectiva);
         }
 
         if ($request->filled('cdg_promocion')) {
@@ -488,144 +490,128 @@ class UsuarioController extends Controller
             ->download('reporte_factibilidad.pdf');
     }
 
-    public function opciones()
+  public function opciones()
     {
         return view('usuarios.opciones');
     }
 
-public function masivo(Request $request)
-{
-    $request->validate([
-        'archivo' => 'required|mimes:xlsx,xls'
-    ]);
+    public function masivo(Request $request)
+    {
+        $request->validate([
+            'archivo' => 'required|mimes:xlsx,xls'
+        ]);
 
-    $archivo = $request->file('archivo');
+        $archivo = $request->file('archivo');
+        $spreadsheet = IOFactory::load($archivo);
+        $hoja = $spreadsheet->getActiveSheet();
+        $filas = $hoja->toArray();
 
-    $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($archivo);
-    $hoja = $spreadsheet->getActiveSheet();
-
-    $filas = $hoja->toArray();
-
-    $cedulas = [];
-    foreach($filas as $fila) {
-        if (!empty($fila[0])) {
-            $cedulas[] = trim($fila[0]);
+        $cedulas = [];
+        foreach($filas as $fila) {
+            if (!empty($fila[0])) {
+                $cedulas[] = trim($fila[0]);
+            }
         }
+
+        $usuarios = Usuario::whereIn('cedula', $cedulas)->get();
+
+        $estados_civiles = Usuario::select('estado_civil')->distinct()->pluck('estado_civil');
+        $promociones = Usuario::select('promocion')->distinct()->pluck('promocion');
+
+        return view('usuarios.resultado', compact('usuarios', 'estados_civiles', 'promociones'));
     }
 
-    $usuarios = \App\Models\Usuario::whereIn('cedula', $cedulas)->get();
+    public function filtrarProvinciaAjax(Request $request)
+    {
+        $cedulas = explode(',', $request->input('cedulas_filtradas'));
+        $priorizados = ['PASCUALES', 'NUEVA PROSPERINA', 'DURAN', 'MACHALA', 'MANTA', 'BABAHOYO', 'SUR DMG',
+            'PORTOVIEJO', 'DAULE', 'PORTETE', 'ESTEROS', 'QUEVEDO', 'PASAJE', '9 DE OCTUBRE',
+            'LIBERTAD SALINAS', 'ESMERALDAS', 'MODELO', 'FLORIDA', 'EUGENIO ESPEJO', 'NARANJAL BALAO',
+            'BUENA FE', 'HUAQUILLAS', 'ELOY ALFARO', 'LA DELICIA', 'PUEBLOVIEJO', 'VINCES',
+            'LAGO AGRIO', 'PLAYAS', 'STA ELENA', 'QUITUMBE'];
 
-    $estados_civiles = \App\Models\Usuario::select('estado_civil')
-        ->distinct()
-        ->pluck('estado_civil');
+        $query = Usuario::whereIn('cedula', $cedulas);
+        $original = Usuario::whereIn('cedula', $cedulas)->get();
 
-    $promociones = \App\Models\Usuario::select('promocion')
-        ->distinct()
-        ->pluck('promocion');
+        if ($request->filled('provincia_trabaja')) $query->where('provincia_trabaja', $request->provincia_trabaja);
+        if ($request->input('alerta') === 'SI') $query->whereNotNull('alertas');
+        elseif ($request->input('alerta') === 'NO') $query->whereNull('alertas');
 
-    return view('usuarios.resultado', compact('usuarios', 'estados_civiles', 'promociones'));
-}
+        $filtrosBooleanos = [
+            'contrato_estudios', 'conyuge_policia_activo', 'enf_catast_sp',
+            'enf_catast_conyuge_hijos', 'discapacidad_sp', 'discapacidad_conyuge_hijos'
+        ];
 
-public function filtrarProvincia(Request $request)
+        foreach ($filtrosBooleanos as $campo) {
+            if ($request->input($campo) === 'SI') {
+                $query->whereNotNull($campo);
+            } elseif ($request->input($campo) === 'NO') {
+                $query->whereNull($campo);
+            }
+        }
+
+        if ($request->filled('estado_civil')) $query->where('estado_civil', $request->estado_civil);
+        if (!empty($request->promocion)) $query->whereIn('promocion', $request->promocion);
+
+        if ($request->input('sitio_priorizado') === 'SI') {
+            $query->where(function ($q) use ($priorizados) {
+                foreach ($priorizados as $palabra) {
+                    $q->orWhere('nomenclatura_territorio_efectivo', 'like', "%{$palabra}%");
+                }
+            });
+        } elseif ($request->input('sitio_priorizado') === 'NO') {
+            $query->where(function ($q) use ($priorizados) {
+                foreach ($priorizados as $palabra) {
+                    $q->where('nomenclatura_territorio_efectivo', 'not like', "%{$palabra}%");
+                }
+            });
+        }
+
+        $aptos = $query->get();
+
+        $no_aptos = $original->filter(fn($u) => !$aptos->contains('cedula', $u->cedula));
+
+        return response()->json([
+            'aptos' => view('usuarios.partials.tabla_aptos', compact('aptos'))->render(),
+            'no_aptos' => view('usuarios.partials.tabla_no_aptos', compact('no_aptos'))->render()
+        ]);
+    }
+
+
+public function descargarExcel(Request $request)
 {
-    $cedulas = explode(',', $request->input('cedulas_filtradas'));
-    $provincia = $request->input('provincia_trabaja');
-    $alerta = $request->input('alerta');
-    $promocionesSeleccionadas = $request->input('promocion');
+    $cedulas = explode(',', $request->input('cedulas'));
 
-    $priorizados = [
-        'PASCUALES', 'NUEVA PROSPERINA', 'DURAN', 'MACHALA', 'MANTA', 'BABAHOYO',
-        'SUR DMG', 'PORTOVIEJO', 'DAULE', 'PORTETE', 'ESTEROS', 'QUEVEDO', 'PASAJE',
-        '9 DE OCTUBRE', 'LIBERTAD SALINAS', 'ESMERALDAS', 'MODELO', 'FLORIDA',
-        'EUGENIO ESPEJO', 'NARANJAL BALAO', 'BUENA FE', 'HUAQUILLAS', 'ELOY ALFARO',
-        'LA DELICIA', 'PUEBLOVIEJO', 'VINCES', 'LAGO AGRIO', 'PLAYAS', 'STA ELENA',
-        'QUITUMBE'
-    ];
+    $usuarios = \App\Models\Usuario::whereIn('cedula', $cedulas)
+        ->select('cedula', 'grado', 'apellidos_nombres','nomenclatura_territorio_efectivo', 'descFuncion_territorio_efectivo', 'idDgpUnidad_territorio_efectivo', 'idDgpFuncion_territorio_efectivo')
+        ->get();
 
-    $query = \App\Models\Usuario::whereIn('cedula', $cedulas);
+    $exportData = $usuarios->map(function($u) {
+        return [
+            'CÉDULA' => $u->cedula,
+            'GRADO' => $u->grado,
+            'NOMBRE' => $u->apellidos_nombres,
 
-    if ($provincia) {
-        $query->where('provincia_trabaja', $provincia);
-    }
+            'NOMENCLATURA' => $u->nomenclatura_territorio_efectivo,
+            'FUNCION' => $u->descFuncion_territorio_efectivo,
+            'ID UNIDAD' => $u->idDgpUnidad_territorio_efectivo,
+            'ID FUNCION' => $u->idDgpFuncion_territorio_efectivo,
+            
+        ];
+    });
 
-    if ($alerta === 'SI') {
-        $query->whereNotNull('alertas');
-    } elseif ($alerta === 'NO') {
-        $query->whereNull('alertas');
-    }
+    $filename = 'traslado_masivo_' . now()->format('Ymd_His') . '.xlsx';
 
-    if ($request->input('contrato_estudios') === 'SI') {
-        $query->whereNotNull('contrato_estudios');
-    } elseif ($request->input('contrato_estudios') === 'NO') {
-        $query->whereNull('contrato_estudios');
-    }
-
-    if ($request->input('conyuge_policia_activo') === 'SI') {
-        $query->whereNotNull('conyuge_policia_activo');
-    } elseif ($request->input('conyuge_policia_activo') === 'NO') {
-        $query->whereNull('conyuge_policia_activo');
-    }
-
-    if ($request->input('enf_catast_sp') === 'SI') {
-        $query->whereNotNull('enf_catast_sp');
-    } elseif ($request->input('enf_catast_sp') === 'NO') {
-        $query->whereNull('enf_catast_sp');
-    }
-
-    if ($request->input('enf_catast_conyuge_hijos') === 'SI') {
-        $query->whereNotNull('enf_catast_conyuge_hijos');
-    } elseif ($request->input('enf_catast_conyuge_hijos') === 'NO') {
-        $query->whereNull('enf_catast_conyuge_hijos');
-    }
-
-    if ($request->input('discapacidad_sp') === 'SI') {
-        $query->whereNotNull('discapacidad_sp');
-    } elseif ($request->input('discapacidad_sp') === 'NO') {
-        $query->whereNull('discapacidad_sp');
-    }
-
-    if ($request->input('discapacidad_conyuge_hijos') === 'SI') {
-        $query->whereNotNull('discapacidad_conyuge_hijos');
-    } elseif ($request->input('discapacidad_conyuge_hijos') === 'NO') {
-        $query->whereNull('discapacidad_conyuge_hijos');
-    }
-
-    if ($request->filled('estado_civil')) {
-        $query->where('estado_civil', $request->input('estado_civil'));
-    }
-
-    if (!empty($promocionesSeleccionadas)) {
-        $query->whereIn('promocion', $promocionesSeleccionadas);
-    }
-
-    $sitio_priorizado = $request->input('sitio_priorizado');
-    if ($sitio_priorizado === 'SI') {
-        $query->where(function($q) use ($priorizados) {
-            foreach ($priorizados as $palabra) {
-                $q->orWhere('nomenclatura_territorio_efectivo', 'like', "%{$palabra}%");
-            }
-        });
-    } elseif ($sitio_priorizado === 'NO') {
-        $query->where(function($q) use ($priorizados) {
-            foreach ($priorizados as $palabra) {
-                $q->where('nomenclatura_territorio_efectivo', 'not like', "%{$palabra}%");
-            }
-        });
-    }
-
-    $aptos = $query->get();
-
-    $estados_civiles = \App\Models\Usuario::select('estado_civil')
-        ->distinct()
-        ->pluck('estado_civil');
-
-    $promociones = \App\Models\Usuario::select('promocion')
-        ->distinct()
-        ->pluck('promocion');
-
-    return view('usuarios.aptos', compact('aptos', 'estados_civiles', 'promociones'));
+    return Excel::download(new class($exportData) implements \Maatwebsite\Excel\Concerns\FromCollection, \Maatwebsite\Excel\Concerns\WithHeadings {
+        protected $data;
+        public function __construct($data) { $this->data = $data; }
+        public function collection() { return collect($this->data); }
+        public function headings(): array { return ['CÉDULA', 'GRADO', 'NOMBRE','NOMENCLATURA',
+            'FUNCION',
+            'ID UNIDAD',
+            'ID FUNCION' ]; }
+    }, $filename);
 }
-
 
    
 }

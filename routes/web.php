@@ -14,7 +14,12 @@ use App\Http\Controllers\NomenclaturaController;
 use App\Http\Controllers\OrganicoEfectivoController;
 use App\Http\Controllers\ProvinciaController;
 use App\Http\Controllers\ReporteOrganicoController;
+use App\Http\Controllers\ReporteOrganicoVisualController;
 use App\Http\Controllers\TrasladoController;
+use App\Http\Controllers\TruequeController;
+
+
+
 
 // Login
 // Muestra el formulario de login
@@ -61,9 +66,6 @@ Route::middleware('auth')->group(function () {
     Route::get('/provincias/{id}', [ProvinciaController::class, 'show'])->name('provincias.show');
     Route::get('/servidores', [ServidorPolicialController::class, 'index'])->name('servidores.index');
 
-    Route::get('/reporte-organico/importar', [ReporteOrganicoController::class, 'showForm'])->name('reporte.form');
-    Route::post('/reporte-organico/importar', [ReporteOrganicoController::class, 'importar'])->name('reporte.importar');
-
 
     Route::get('/organico-efectivo', [OrganicoEfectivoController::class, 'index'])->name('organico.efectivo');
     Route::post('/organico-efectivo/agregar', [OrganicoEfectivoController::class, 'agregar'])->name('organico.efectivo.agregar');
@@ -106,8 +108,27 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/opciones', [UsuarioController::class, 'opciones'])->name('opciones');
     Route::post('/usuarios/masivo', [UsuarioController::class, 'masivo'])->name('usuarios.masivo');
-    Route::post('/usuarios/filtrarAvanzado', [UsuarioController::class, 'filtrarAvanzado'])->name('usuarios.filtrarAvanzado');
+    Route::post('/usuarios/filtrarProvincia', [UsuarioController::class, 'filtrarProvincia'])->name('usuarios.filtrarProvincia');
 
-    
+    Route::post('/usuarios/filtrar-ajax', [UsuarioController::class, 'filtrarProvinciaAjax'])->name('usuarios.filtrar.ajax');
+    Route::post('/usuarios/descargar-excel', [UsuarioController::class, 'descargarExcel'])->name('usuarios.descargar_excel');
+
+    Route::get('/contra', [ImportExcelController::class, 'showContra'])->name('contra.view');
+    Route::post('/contra/import', [ImportExcelController::class, 'importContra'])->name('contra.import');
+    Route::post('/contra/guardar-novedad', [ImportExcelController::class, 'guardarNovedad'])->name('contra.guardarNovedad');
+
+    Route::get('/trueque', [TruequeController::class, 'index'])->name('trueque.index');
+    Route::post('/procesar-trueque', [TruequeController::class, 'procesar'])->name('trueque.procesar');
+
+    Route::get('/reporte-organico', [ReporteOrganicoController::class, 'index'])->name('reporte-organico.index');
+  
+    Route::get('/reporte-organico/importar', [ReporteOrganicoController::class, 'showForm'])->name('reporte.form');
+    Route::post('/reporte-organico/importar', [ReporteOrganicoController::class, 'importar'])->name('reporte.importar');
+    Route::get('/visualizador-organico', [ReporteOrganicoVisualController::class, 'index'])->name('reporte_organico.visualizador');
+    Route::get('/reporte-organico/ocupantes', [ReporteOrganicoVisualController::class, 'ocupantes'])->name('reporte_organico.ocupantes');
+
+    Route::get('/reporte-organico/exportar', [ReporteOrganicoVisualController::class, 'exportarExcel'])->name('reporte_organico.exportar');
+    Route::get('/reporte-organico/estadisticas', [ReporteOrganicoVisualController::class, 'obtenerEstadisticas'])->name('reporte_organico.estadisticas');
+
 });
 

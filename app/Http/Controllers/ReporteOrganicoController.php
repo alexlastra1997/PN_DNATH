@@ -24,4 +24,3 @@ class ReporteOrganicoController extends Controller
         return back()->with('success', 'Importación exitosa');
     }
 }
-
