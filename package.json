@@ -1,20 +1,19 @@
 {
     "private": true,
     "scripts": {
-        "dev": "vite",
-        "build": "npx tailwindcss -i ./app.css -o ./dist/output.css --watch"
+          "dev": "vite",
+    "build": "vite build"
     },
     "devDependencies": {
         "autoprefixer": "^10.4.21",
-        "laravel-vite-plugin": "^0.7.8",
-        "postcss": "^8.5.3",
+        "laravel-vite-plugin": "^2.0.0",
+        "postcss": "^8.5.6",
         "tailwindcss": "^3.4.17",
-        "vite": "^4.5.0"
+        "vite": "^7.1.2"
     },
     "dependencies": {
         "axios": "^1.8.4",
         "flowbite": "^3.1.2",
         "lodash": "^4.17.21"
     }
-    
 }
