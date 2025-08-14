@@ -10,8 +10,6 @@
             <input type="file" name="archivo" class="border rounded p-2">
             <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded">Masivo</button>
         </form>
-
-        <a href="#" class="bg-green-500 text-white px-4 py-2 rounded flex items-center justify-center">Individual</a>
     </div>
 
 </div>

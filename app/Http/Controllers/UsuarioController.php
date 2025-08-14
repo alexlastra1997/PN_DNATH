@@ -159,7 +159,7 @@ class UsuarioController extends Controller
         $provincia_trabaja = Usuario::select('provincia_trabaja')->distinct()->whereNotNull('provincia_trabaja')->orderBy('provincia_trabaja')->pluck('provincia_trabaja');
         $provincia_vive = Usuario::select('provincia_vive')->distinct()->whereNotNull('provincia_vive')->orderBy('provincia_vive')->pluck('provincia_vive');
 
-        $usuarios = $query->paginate(100);
+        $usuarios = $query->paginate(50);
 
         return view('usuarios.index', compact(
             'usuarios',

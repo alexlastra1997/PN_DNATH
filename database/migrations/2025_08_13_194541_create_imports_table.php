@@ -4,28 +4,24 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
+class CreateImportsTable extends Migration
 {
-    /**
-     * Run the migrations.
-     *
-     * @return void
-     */
-    Schema::create('imports', function (Blueprint $t) {
-        $t->id();
-        $t->string('filename');
-        $t->string('status')->default('queued'); // queued|processing|done|failed
-        $t->timestamp('started_at')->nullable();
-        $t->timestamp('finished_at')->nullable();
-        $t->timestamps();
-    });
-    /**
-     * Reverse the migrations.
-     *
-     * @return void
-     */
-    public function down()
+    public function up(): void
+    {
+        Schema::create('imports', function (Blueprint $table) {
+            $table->id();
+            $table->string('filename');
+            $table->string('status')->default('queued');
+            $table->timestamp('started_at')->nullable();
+            $table->timestamp('finished_at')->nullable();
+            $table->text('error')->nullable();
+            $table->timestamps();
+        });
+    }
+
+    public function down(): void
     {
         Schema::dropIfExists('imports');
     }
-};
+}
+

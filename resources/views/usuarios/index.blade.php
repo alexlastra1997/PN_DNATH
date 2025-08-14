@@ -36,7 +36,7 @@
 
                     <div class="mb-4 relative inline-block">
                         <a href="{{ route('usuarios.seleccionados') }}"
-                        class="relative inline-flex items-center justify-center w-10 h-10 bg-yellow-600 rounded-full hover:bg-yellow-700 text-white">
+                            class="relative inline-flex items-center justify-center w-10 h-10 bg-yellow-600 rounded-full hover:bg-yellow-700 text-white">
 
                             <!-- Ícono de usuario -->
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none"
@@ -53,7 +53,7 @@
                                 </span>
                             @endif
                         </a>
-</div>
+                    </div>
 
 
                     <form action="#" method="GET" class="hidden md:block md:pl-2">

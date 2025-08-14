@@ -42,6 +42,12 @@ return new class extends Migration
         $table->string('discapacidad_conyuge_hijos')->nullable();
         $table->string('hijos_menor_igual_18')->nullable(); // equivale a `HIJOS<=18`
         $table->text('alertas')->nullable();
+        $table->string('alerta_devengacion')->nullable();
+        $table->string('alerta_devengacion_fecha')->nullable();
+        $table->string('alerta_devengacion_estado')->nullable();
+        $table->string('alerta_marco_legal')->nullable();
+        $table->string('alerta_marco_legal_fecha')->nullable();
+        $table->string('alerta_marco_legal_estado')->nullable();
         $table->text('meritos')->nullable();
         $table->integer('num_demerito')->nullable();
         $table->string('novedad_situacion')->nullable();
