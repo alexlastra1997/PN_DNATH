@@ -17,7 +17,7 @@ use App\Http\Controllers\ReporteOrganicoController;
 use App\Http\Controllers\ReporteOrganicoVisualController;
 use App\Http\Controllers\TrasladoController;
 use App\Http\Controllers\TruequeController;
-
+use Illuminate\Pagination\LengthAwarePaginator;
 
 
 
@@ -44,6 +44,14 @@ Route::middleware('auth')->group(function () {
     Route::get('/usuarios/seleccionados', [UsuarioController::class, 'seleccionados'])->name('usuarios.seleccionados');
     Route::get('/usuarios/factibilidad', [UsuarioController::class, 'factibilidad'])->name('usuarios.factibilidad');
     Route::get('/usuarios/factibilidad/pdf', [UsuarioController::class, 'exportarFactibilidadPdf'])->name('usuarios.factibilidad.pdf');
+
+    // PUNTO DE CARGA
+    Route::get('/usuarios/opciones', [UsuarioController::class, 'opciones'])->name('usuarios.opciones');
+    Route::post('/usuarios/opciones', [UsuarioController::class, 'cargarDocumento'])->name('usuarios.cargar_documento');
+
+// RESULTADOS PAGINADOS (50)
+    Route::get('/usuarios/resultados', [UsuarioController::class, 'resultados'])->name('usuarios.resultados');
+
 
     Route::delete('/usuarios/seleccionados/{id}', [UsuarioController::class, 'eliminarSeleccionado'])->name('usuarios.eliminarSeleccionado');
     Route::get('/usuarios/{usuario}', [UsuarioController::class, 'show'])->name('usuarios.show');
@@ -81,7 +89,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/nomenclatura/{niveles?}', [NomenclaturaController::class, 'nomenclatura'])
     ->where('niveles', '.*')
     ->name('nomenclatura.index');
-    
+
     Route::get('/nomenclatura-excel/{niveles?}', [NomenclaturaController::class, 'exportarExcel'])
     ->where('niveles', '.*')
     ->name('nomenclatura.exportarExcel');
@@ -91,7 +99,7 @@ Route::middleware('auth')->group(function () {
     ->name('nomenclatura.exportarPDF');
 
 
-   
+
     Route::get('/traslados', [TrasladoController::class, 'index'])->name('traslados.index');
     Route::post('/traslados/procesar', [TrasladoController::class, 'procesar'])->name('traslados.procesar');
 
@@ -100,17 +108,11 @@ Route::middleware('auth')->group(function () {
         return redirect()->route('traslados.index');
     });
 
-    Route::get('/detha', [DethaController::class, 'index'])->name('detha.index');
-    Route::get('/detha/{id}', [DethaController::class, 'show'])->name('detha.show');
-    Route::get('/detha/{id}/edit', [DethaController::class, 'edit'])->name('detha.edit');
-    Route::post('/detha/{id}/update', [DethaController::class, 'update'])->name('detha.update');
+    //Route::get('/detha', [DethaController::class, 'index'])->name('detha.index');
+    //Route::get('/detha/{id}', [DethaController::class, 'show'])->name('detha.show');
+    //Route::get('/detha/{id}/edit', [DethaController::class, 'edit'])->name('detha.edit');
+    //Route::post('/detha/{id}/update', [DethaController::class, 'update'])->name('detha.update');
 
-
-    Route::get('/opciones', [UsuarioController::class, 'opciones'])->name('opciones');
-    Route::post('/usuarios/masivo', [UsuarioController::class, 'masivo'])->name('usuarios.masivo');
-    Route::post('/usuarios/filtrarProvincia', [UsuarioController::class, 'filtrarProvincia'])->name('usuarios.filtrarProvincia');
-
-    Route::post('/usuarios/filtrar-ajax', [UsuarioController::class, 'filtrarProvinciaAjax'])->name('usuarios.filtrar.ajax');
     Route::post('/usuarios/descargar-excel', [UsuarioController::class, 'descargarExcel'])->name('usuarios.descargar_excel');
 
     Route::get('/contra', [ImportExcelController::class, 'showContra'])->name('contra.view');
@@ -121,7 +123,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/procesar-trueque', [TruequeController::class, 'procesar'])->name('trueque.procesar');
 
     Route::get('/reporte-organico', [ReporteOrganicoController::class, 'index'])->name('reporte-organico.index');
-  
+
     Route::get('/reporte-organico/importar', [ReporteOrganicoController::class, 'showForm'])->name('reporte.form');
     Route::post('/reporte-organico/importar', [ReporteOrganicoController::class, 'importar'])->name('reporte.importar');
     Route::get('/visualizador-organico', [ReporteOrganicoVisualController::class, 'index'])->name('reporte_organico.visualizador');

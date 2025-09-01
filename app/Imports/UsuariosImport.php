@@ -65,6 +65,8 @@ class UsuariosImport implements ToModel, WithHeadingRow
                     'observacion_tenencia' => $row['observacion_tenencia'] ?? null,
                     'alertas_problemas_salud' => $row['alertas_problemas_salud'] ?? null,
                     'FaseMaternidadUDGA' => $row['FaseMaternidadUDGA'] ?? null,
+                    'fase_maternidad' => $row['fase_maternidad'] ?? null,
+                    'fecha_final_maternidad' => $this->convertirFecha($row['fecha_final_maternidad'] ?? null),
                     'historico_pases' => $row['historico_pases'] ?? null,
                     'traslado_temporal' => $row['traslado_temporal'] ?? null,
                     'traslado_eventual' => $row['traslado_eventual'] ?? null,

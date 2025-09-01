@@ -33,12 +33,6 @@
         </button>
     </form>
 
-    <div class="w-full max-w-lg mx-auto mt-10">
-        <canvas id="estadoChart"></canvas>
-    </div>
-
-
-
     {{-- Tabla --}}
     <div class="overflow-x-auto">
         <table class="min-w-full bg-white border text-sm">
@@ -105,40 +99,6 @@
     </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script>
-    document.addEventListener('DOMContentLoaded', function () {
-        const url = "{{ route('reporte_organico.estadisticas') }}" + "?@json(http_build_query(request()->only(['servicio','nomenclatura','cargo'])))".replace(/"/g, '');
-
-        fetch(url)
-            .then(response => response.json())
-            .then(data => {
-                const ctx = document.getElementById('estadoChart').getContext('2d');
-                const chart = new Chart(ctx, {
-                    type: 'doughnut',
-                    data: {
-                        labels: ['Vacantes', 'Completos', 'Excedidos'],
-                        datasets: [{
-                            data: [data.vacantes, data.completos, data.excedidos],
-                            backgroundColor: ['#f87171', '#34d399', '#facc15']
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        plugins: {
-                            legend: {
-                                position: 'bottom'
-                            },
-                            title: {
-                                display: true,
-                                text: 'Estado del Orgánico Filtrado'
-                            }
-                        }
-                    }
-                });
-            });
-    });
-</script>
 
 @endsection
 

@@ -54,6 +54,8 @@ return new class extends Migration
         $table->text('observacion_tenencia')->nullable();
         $table->text('alertas_problemas_salud')->nullable();
         $table->text('FaseMaternidadUDGA')->nullable();
+        $table->text('fase_maternidad')->nullable();
+        $table->text('fecha_final_maternidad')->nullable();
         $table->text('historico_pases')->nullable();
         $table->text('Traslado_temporal')->nullable();
         $table->text('Traslado_eventual')->nullable();
