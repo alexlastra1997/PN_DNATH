@@ -51,6 +51,10 @@ Route::middleware('auth')->group(function () {
 
 // RESULTADOS PAGINADOS (50)
     Route::get('/usuarios/resultados', [UsuarioController::class, 'resultados'])->name('usuarios.resultados');
+    Route::get(
+        '/reporte-organico/exportar-resumen-xlsx',
+        [ReporteOrganicoVisualController::class, 'exportResumenXlsx']
+    )->name('reporte_organico.exportar_resumen_xlsx');
 
 
     Route::delete('/usuarios/seleccionados/{id}', [UsuarioController::class, 'eliminarSeleccionado'])->name('usuarios.eliminarSeleccionado');
