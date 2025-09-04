@@ -45,12 +45,19 @@ Route::middleware('auth')->group(function () {
     Route::get('/usuarios/factibilidad', [UsuarioController::class, 'factibilidad'])->name('usuarios.factibilidad');
     Route::get('/usuarios/factibilidad/pdf', [UsuarioController::class, 'exportarFactibilidadPdf'])->name('usuarios.factibilidad.pdf');
 
-    // PUNTO DE CARGA
-    Route::get('/usuarios/opciones', [UsuarioController::class, 'opciones'])->name('usuarios.opciones');
-    Route::post('/usuarios/opciones', [UsuarioController::class, 'cargarDocumento'])->name('usuarios.cargar_documento');
+    // Opciones (cargar Excel)
+    Route::get('/usuarios/opciones', [UsuarioController::class, 'opciones'])
+        ->name('usuarios.opciones');
+    Route::post('/usuarios/masivo', [UsuarioController::class, 'masivo'])
+        ->name('usuarios.masivo');
 
-// RESULTADOS PAGINADOS (50)
-    Route::get('/usuarios/resultados', [UsuarioController::class, 'resultados'])->name('usuarios.resultados');
+// Resultados
+    Route::get('/usuarios/resultados', [UsuarioController::class, 'resultado'])
+        ->name('usuarios.resultados');
+// alias opcional
+    Route::get('/usuarios/resultado', [UsuarioController::class, 'resultado'])
+        ->name('usuarios.resultado');
+
     Route::get(
         '/reporte-organico/exportar-resumen-xlsx',
         [ReporteOrganicoVisualController::class, 'exportResumenXlsx']

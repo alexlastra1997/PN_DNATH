@@ -130,68 +130,68 @@ class ReporteOrganicoVisualController extends Controller
             ->whereRaw("UPPER(ro.servicio_organico) LIKE '%PREV-ZONAL%'")
             ->selectRaw('COALESCE(SUM(ro.numero_organico_ideal),0) as total_aprobado')
             ->selectRaw('COALESCE(SUM((
-        SELECT COUNT(*) FROM usuarios u
-        WHERE u.nomenclatura_efectiva = ro.nomenclatura_organico
-          AND u.funcion_efectiva     = ro.cargo_organico
-    )),0) as total_efectivo')
+                SELECT COUNT(*) FROM usuarios u
+                WHERE u.nomenclatura_efectiva = ro.nomenclatura_organico
+                  AND u.funcion_efectiva     = ro.cargo_organico
+            )),0) as total_efectivo')
             ->first();
 
-// === NDESC: SUBZONAL (servicio contiene PREV-SZ) ===
+        // === NDESC: SUBZONAL (servicio contiene PREV-SZ) ===
         $ndescSubzonal = (clone $base)
             ->whereRaw("UPPER(ro.nomenclatura_organico) LIKE '%NDESC%'")
             ->whereRaw("UPPER(ro.servicio_organico) LIKE '%PREV-SZ%'")
             ->selectRaw('COALESCE(SUM(ro.numero_organico_ideal),0) as total_aprobado')
             ->selectRaw('COALESCE(SUM((
-        SELECT COUNT(*) FROM usuarios u
-        WHERE u.nomenclatura_efectiva = ro.nomenclatura_organico
-          AND u.funcion_efectiva     = ro.cargo_organico
-    )),0) as total_efectivo')
+                SELECT COUNT(*) FROM usuarios u
+                WHERE u.nomenclatura_efectiva = ro.nomenclatura_organico
+                  AND u.funcion_efectiva     = ro.cargo_organico
+            )),0) as total_efectivo')
             ->first();
 
-// === NDESC: DISTRITO - CIRCUITO - SUBCIRCUITO (servicio contiene PREV-D-C-S) ===
+        // === NDESC: DISTRITO - CIRCUITO - SUBCIRCUITO (servicio contiene PREV-D-C-S) ===
         $ndescDCS = (clone $base)
             ->whereRaw("UPPER(ro.nomenclatura_organico) LIKE '%NDESC%'")
             ->whereRaw("UPPER(ro.servicio_organico) LIKE '%PREV-D-C-S%'")
             ->selectRaw('COALESCE(SUM(ro.numero_organico_ideal),0) as total_aprobado')
             ->selectRaw('COALESCE(SUM((
-        SELECT COUNT(*) FROM usuarios u
-        WHERE u.nomenclatura_efectiva = ro.nomenclatura_organico
-          AND u.funcion_efectiva     = ro.cargo_organico
-    )),0) as total_efectivo')
+                    SELECT COUNT(*) FROM usuarios u
+                    WHERE u.nomenclatura_efectiva = ro.nomenclatura_organico
+                      AND u.funcion_efectiva     = ro.cargo_organico
+                )),0) as total_efectivo')
             ->first();
 
 
-// === Jefatura Preventiva (JPREV) — por NOMENCLATURA ===
+        // === Jefatura Preventiva (JPREV) — por NOMENCLATURA ===
         $jefPrev = (clone $base)
             ->whereRaw("UPPER(ro.nomenclatura_organico) LIKE '%JPREV%'")
             ->selectRaw('COALESCE(SUM(ro.numero_organico_ideal),0) as total_aprobado')
             ->selectRaw('COALESCE(SUM((
-        SELECT COUNT(*) FROM usuarios u
-        WHERE u.nomenclatura_efectiva = ro.nomenclatura_organico
-          AND u.funcion_efectiva     = ro.cargo_organico
-    )),0) as total_efectivo')
+                SELECT COUNT(*) FROM usuarios u
+                WHERE u.nomenclatura_efectiva = ro.nomenclatura_organico
+                  AND u.funcion_efectiva     = ro.cargo_organico
+                )),0) as total_efectivo')
             ->first();
 
-// === Jefatura de Investigación (JINV) — por NOMENCLATURA ===
+        // === Jefatura de Investigación (JINV) — por NOMENCLATURA ===
         $jefInv = (clone $base)
             ->whereRaw("UPPER(ro.nomenclatura_organico) LIKE '%JINV%'")
             ->selectRaw('COALESCE(SUM(ro.numero_organico_ideal),0) as total_aprobado')
             ->selectRaw('COALESCE(SUM((
-        SELECT COUNT(*) FROM usuarios u
-        WHERE u.nomenclatura_efectiva = ro.nomenclatura_organico
-          AND u.funcion_efectiva     = ro.cargo_organico
-    )),0) as total_efectivo')
+            SELECT COUNT(*) FROM usuarios u
+                WHERE u.nomenclatura_efectiva = ro.nomenclatura_organico
+                  AND u.funcion_efectiva     = ro.cargo_organico
+            )),0) as total_efectivo')
             ->first();
 
-// === Jefatura de Inteligencia (JINT) — por NOMENCLATURA ===
+        // === Jefatura de Inteligencia (JINT) — por NOMENCLATURA ===
         $jefInt = (clone $base)
             ->whereRaw("UPPER(ro.nomenclatura_organico) LIKE '%JINT%'")
             ->selectRaw('COALESCE(SUM(ro.numero_organico_ideal),0) as total_aprobado')
             ->selectRaw('COALESCE(SUM((
-        SELECT COUNT(*) FROM usuarios u
-        WHERE u.nomenclatura_efectiva = ro.nomenclatura_organico
-          AND u.funcion_efectiva     = ro.cargo_organico
-    )),0) as total_efectivo')
+                SELECT COUNT(*) FROM usuarios u
+                WHERE u.nomenclatura_efectiva = ro.nomenclatura_organico
+                AND u.funcion_efectiva     = ro.cargo_organico
+                )),0) as total_efectivo')
             ->first();
 
         $estadoEfectivo = (clone $base)
@@ -209,14 +209,14 @@ class ReporteOrganicoVisualController extends Controller
                 // ->orWhereRaw("UPPER(u.estado_efectivo) LIKE '%TRASLADO%OCASIONAL%'");
             })
             ->selectRaw("
-        CASE
-          WHEN UPPER(u.estado_efectivo) LIKE '%TRASLADO%TEMPORAL%' THEN 'TRASLADO TEMPORAL
-          'WHEN UPPER(u.estado_efectivo) LIKE '%TRASLADO%TEMPORAL%EN%EXCEDENTE%' THEN 'TRASLADO TEMPORAL'
-          WHEN UPPER(u.estado_efectivo) LIKE '%TRASLADO%EVENTUAL%'
-               /* OR UPPER(u.estado_efectivo) LIKE '%TRASLADO%OCASIONAL%' */ THEN 'TRASLADO EVENTUAL'
-          WHEN UPPER(u.estado_efectivo) LIKE '%UNIDAD%DE%ORIGEN%'  THEN 'UNIDAD DE ORIGEN'
-        END AS categoria
-    ")
+             CASE
+                  WHEN UPPER(u.estado_efectivo) LIKE '%TRASLADO%TEMPORAL%' THEN 'TRASLADO TEMPORAL
+                  'WHEN UPPER(u.estado_efectivo) LIKE '%TRASLADO%TEMPORAL%EN%EXCEDENTE%' THEN 'TRASLADO TEMPORAL'
+                  WHEN UPPER(u.estado_efectivo) LIKE '%TRASLADO%EVENTUAL%'
+                       /* OR UPPER(u.estado_efectivo) LIKE '%TRASLADO%OCASIONAL%' */ THEN 'TRASLADO EVENTUAL'
+                  WHEN UPPER(u.estado_efectivo) LIKE '%UNIDAD%DE%ORIGEN%'  THEN 'UNIDAD DE ORIGEN'
+                END AS categoria
+            ")
             // evita duplicar gente si el join “explota” por múltiples filas RO
             ->selectRaw("COUNT(DISTINCT u.id) AS total")
             ->groupBy('categoria')
@@ -287,11 +287,10 @@ class ReporteOrganicoVisualController extends Controller
         return view('reporte_organico.ocupantes', compact('ocupantes', 'nomenclatura', 'cargo'));
     }
 
-
-   public function exportarExcel(Request $request)
-{
-    return Excel::download(new ReporteOrganicoExport($request), 'reporte_organico_filtrado.xlsx');
-}
+       public function exportarExcel(Request $request)
+    {
+        return Excel::download(new ReporteOrganicoExport($request), 'reporte_organico_filtrado.xlsx');
+    }
 
     public function obtenerEstadisticas(Request $request)
     {

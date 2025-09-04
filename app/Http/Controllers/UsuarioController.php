@@ -490,49 +490,213 @@ class UsuarioController extends Controller
         return \Barryvdh\DomPDF\Facade\Pdf::loadView('usuarios.factibilidad_pdf', compact('usuarios', 'user', 'fecha'))
             ->download('reporte_factibilidad.pdf');
     }
-// Vista de carga (documento se sube aquí)
+
+// ==== Vista de carga ====
     public function opciones()
     {
         return view('usuarios.opciones');
     }
 
-    // Recibe el documento, extrae cédulas de la primera columna y redirige a resultados
-    public function cargarDocumento(Request $request)
+    // ==== Procesa Excel y guarda universo de cédulas en sesión ====
+    public function masivo(Request $request)
     {
         $request->validate([
-            'archivo' => 'required|file|mimes:xlsx,xls,csv,txt'
+            'archivo' => 'required|mimes:xlsx,xls,csv'
         ]);
 
-        $path = $request->file('archivo')->getRealPath();
-        $spreadsheet = IOFactory::load($path);
-        $sheet = $spreadsheet->getActiveSheet();
-        $rows = $sheet->toArray(null, true, true, true);
+        $archivo = $request->file('archivo');
+        $spreadsheet = IOFactory::load($archivo->getRealPath());
+        $hoja = $spreadsheet->getActiveSheet();
+        $filas = $hoja->toArray(null, true, true, true);
+
+        // Normalizador de cédulas: solo dígitos y pad a 10
+        $norm = function (?string $v): ?string {
+            if ($v === null) return null;
+            $d = preg_replace('/\D+/', '', (string)$v);
+            if ($d === '') return null;
+            // Ajusta a 10; si tu sistema usa 9 u 11, cambia aquí
+            return str_pad(substr($d, -10), 10, '0', STR_PAD_LEFT);
+        };
 
         $cedulas = [];
-        foreach ($rows as $row) {
-            $valor = isset($row['A']) ? trim((string)$row['A']) : '';
-            if ($valor === '' || strtolower($valor) === 'cedula' || strtolower($valor) === 'cédula') continue;
-            $cedulas[] = $valor;
+        $esPrimera = true;
+        foreach ($filas as $fila) {
+            // Si la primera fila es encabezado, sáltala (detecta no-dígitos)
+            if ($esPrimera) {
+                $esPrimera = false;
+                $posible = $fila['A'] ?? '';
+                $soloDig = preg_replace('/\D+/', '', (string)$posible);
+                if ($soloDig === '' || strlen($soloDig) < 8) {
+                    // parece encabezado, no lo tomo
+                    continue;
+                }
+            }
+            $valor = $norm($fila['A'] ?? null);
+            if ($valor !== null) {
+                $cedulas[] = $valor;
+            }
         }
-        $cedulas = array_values(array_unique($cedulas));
 
-        session(['cedulas_documento' => $cedulas]);
+        $cedulas = collect($cedulas)->filter()->unique()->values()->all();
 
+        if (empty($cedulas)) {
+            return back()->with('error', 'No se encontraron cédulas válidas en el archivo.');
+        }
+
+        // Guarda en sesión
+        $request->session()->put('cedulas_filtradas', $cedulas);
+
+        // Redirige a resultados
         return redirect()->route('usuarios.resultados');
     }
 
-    // Muestra usuarios del documento, paginando 50 - sin filtros
-    public function resultados()
+    // ==== Listado con filtros (siempre restringido por universo) ====
+    public function resultado(Request $request)
     {
-        $cedulas = (array) session('cedulas_documento', []);
+        // Botón "Limpiar" => borra universo
+        if ($request->boolean('clear')) {
+            $request->session()->forget('cedulas_filtradas');
+            return redirect()->route('usuarios.resultados');
+        }
 
-        $usuarios = empty($cedulas)
-            ? \App\Models\Usuario::whereRaw('1=0')->paginate(50)
-            : \App\Models\Usuario::whereIn('cedula', $cedulas)
-                ->paginate(50)
-                ->withQueryString();
+        // --- Parámetros UI ---
+        $alertasSeleccionadas = (array) $request->input('alertas', []);
+        $estado               = $request->input('estado', 'todos');
+        $q                    = trim((string) $request->input('q', ''));
 
-        return view('usuarios.resultado', compact('usuarios')); // <- usa "resultado" (singular)
+        // --- Lista blanca de columnas de alerta ---
+        $opcionesAlertas = [
+            'contrato_estudios',
+            'enf_catast_sp',
+            'enf_catast_conyuge_hijos',
+            'discapacidad_sp',
+            'discapacidad_conyuge_hijos',
+            'alertas',
+            'alertas_problemas_salud',
+            'novedad_situacion',
+        ];
+        $alertasSeleccionadas = array_values(array_intersect($alertasSeleccionadas, $opcionesAlertas));
+
+        // --- Normalizador de cédulas (mismo de masivo) ---
+        $norm = function ($v) {
+            $d = preg_replace('/\D+/', '', (string)$v);
+            if ($d === '') return null;
+            return str_pad(substr($d, -10), 10, '0', STR_PAD_LEFT);
+        };
+
+        // --- Universo de cédulas: primero query (hidden), si no, sesión ---
+        $cedulas = [];
+        $param = $request->input('cedulas', null);
+        if (is_string($param) && $param !== '') {
+            foreach (explode(',', $param) as $c) {
+                $n = $norm($c);
+                if ($n !== null) $cedulas[] = $n;
+            }
+        } elseif (is_array($param)) {
+            foreach ($param as $c) {
+                $n = $norm($c);
+                if ($n !== null) $cedulas[] = $n;
+            }
+        }
+
+        if (empty($cedulas)) {
+            // Sesión
+            $fromSession = (array) $request->session()->get('cedulas_filtradas', []);
+            foreach ($fromSession as $c) {
+                $n = $norm($c);
+                if ($n !== null) $cedulas[] = $n;
+            }
+        }
+
+        // --- Base de consulta ---
+        $base = DB::table('usuarios');
+
+        // ** GARANTÍA: si NO hay universo, NO mostrar nada **
+        if (empty($cedulas)) {
+            $base->whereRaw('1=0'); // nunca devuelve filas
+        } else {
+            $base->whereIn('cedula', $cedulas);
+        }
+
+        // Búsqueda libre
+        if ($q !== '') {
+            $p = "%{$q}%";
+            $base->where(function ($qq) use ($p) {
+                $qq->where('cedula', 'like', $p)
+                    ->orWhere('apellidos_nombres', 'like', $p)
+                    ->orWhere('grado', 'like', $p)
+                    ->orWhere('provincia_trabaja', 'like', $p);
+            });
+        }
+
+        // Helper de "valor significativo" en columnas de alerta
+        $colTieneValor = function($q, $col) {
+            $q->whereNotNull($col)
+                ->whereRaw("TRIM(`$col`) <> ''")
+                ->whereRaw("UPPER(TRIM(`$col`)) NOT IN ('NO','N/A','NA')")
+                ->whereRaw("TRIM(CAST(`$col` AS CHAR)) <> '0'");
+        };
+
+        // Filtro por alertas
+        if (!empty($alertasSeleccionadas)) {
+            $base->where(function ($q2) use ($alertasSeleccionadas, $colTieneValor) {
+                foreach ($alertasSeleccionadas as $col) {
+                    $q2->orWhere(function ($c) use ($col, $colTieneValor) {
+                        $colTieneValor($c, $col);
+                    });
+                }
+            });
+        } elseif ($estado === 'alerta') {
+            $base->where(function ($q2) use ($opcionesAlertas, $colTieneValor) {
+                foreach ($opcionesAlertas as $col) {
+                    $q2->orWhere(function ($c) use ($col, $colTieneValor) {
+                        $colTieneValor($c, $col);
+                    });
+                }
+            });
+        }
+
+        // Estado activo
+        if ($estado === 'activo') {
+            $base->where(function ($q3) {
+                $q3->whereNull('novedad_situacion')
+                    ->orWhere('novedad_situacion', '')
+                    ->orWhereRaw("UPPER(TRIM(`novedad_situacion`)) = 'ACTIVO'");
+            });
+        }
+
+        // Columnas a mostrar
+        $selectCols = [
+            'cedula', 'apellidos_nombres', 'grado', 'provincia_trabaja',
+            'estado_civil', 'promocion', 'novedad_situacion',
+            'contrato_estudios', 'enf_catast_sp', 'enf_catast_conyuge_hijos',
+            'discapacidad_sp', 'discapacidad_conyuge_hijos', 'alertas',
+            'alertas_problemas_salud','alerta_devengacion',
+            'alerta_marco_legal',
+            'observacion_tenencia',
+            'pase_ucp_ccp_cpl',
+            'FaseMaternidadUDGA',
+            'fase_maternidad',
+            'maternidad',
+        ];
+
+        // Paginación (preserva filtros + universo)
+        $usuarios = $base->select($selectCols)
+            ->orderBy('apellidos_nombres')
+            ->paginate(100)
+            ->appends(array_merge(
+                $request->query(),
+                !empty($cedulas) ? ['cedulas' => implode(',', $cedulas)] : []
+            ));
+
+        return view('usuarios.resultado', [
+            'usuarios'             => $usuarios,
+            'opcionesAlertas'      => $opcionesAlertas,
+            'alertasSeleccionadas' => $alertasSeleccionadas,
+            'estadoSeleccionado'   => $estado,
+            'q'                    => $q,
+            'cedulas'              => $cedulas, // para el hidden
+        ]);
     }
 
 
