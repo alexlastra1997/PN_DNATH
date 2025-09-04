@@ -58,6 +58,12 @@ Route::middleware('auth')->group(function () {
     Route::get('/usuarios/resultado', [UsuarioController::class, 'resultado'])
         ->name('usuarios.resultado');
 
+
+    Route::post('/usuarios/calificar', [UsuarioController::class, 'calificar'])->name('usuarios.calificar');
+    Route::get('/usuarios/carrito', [UsuarioController::class, 'carrito'])->name('usuarios.carrito');
+    Route::post('/usuarios/carrito/eliminar', [UsuarioController::class, 'carritoEliminar'])
+        ->name('usuarios.carrito.eliminar');
+
     Route::get(
         '/reporte-organico/exportar-resumen-xlsx',
         [ReporteOrganicoVisualController::class, 'exportResumenXlsx']

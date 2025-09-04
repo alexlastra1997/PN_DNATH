@@ -682,8 +682,7 @@ class UsuarioController extends Controller
 
         // Paginación (preserva filtros + universo)
         $usuarios = $base->select($selectCols)
-            ->orderBy('apellidos_nombres')
-            ->paginate(100)
+            ->paginate(50)
             ->appends(array_merge(
                 $request->query(),
                 !empty($cedulas) ? ['cedulas' => implode(',', $cedulas)] : []
@@ -698,6 +697,118 @@ class UsuarioController extends Controller
             'cedulas'              => $cedulas, // para el hidden
         ]);
     }
+
+    // === Normalizador de cédula (opcional: si ya lo tienes, reutiliza el tuyo) ===
+    private function normCedula(?string $v): ?string {
+        if ($v === null) return null;
+        $d = preg_replace('/\D+/', '', (string)$v);
+        if ($d === '') return null;
+        return str_pad(substr($d, -10), 10, '0', STR_PAD_LEFT);
+    }
+
+    /**
+     * POST /usuarios/calificar
+     * Guarda en sesión al usuario como APTO o NO_APTO.
+     * Request: { cedula: string, estado: 'APTO'|'NO_APTO' }
+     * Respuesta JSON: {status: 'ok'|'exists'|'error', message: string, estado?: string}
+     */
+    public function calificar(\Illuminate\Http\Request $request)
+    {
+        $request->validate([
+            'cedula' => 'required',
+            'estado' => 'required|in:APTO,NO_APTO',
+        ]);
+
+        $ced = $this->normCedula($request->input('cedula'));
+        if (!$ced) {
+            return response()->json(['status' => 'error', 'message' => 'Cédula inválida'], 422);
+        }
+
+        // Busca datos mínimos del usuario
+        $u = \Illuminate\Support\Facades\DB::table('usuarios')
+            ->select('cedula','apellidos_nombres','grado')
+            ->where('cedula', $ced)
+            ->first();
+
+        if (!$u) {
+            return response()->json(['status' => 'error', 'message' => 'Usuario no encontrado'], 404);
+        }
+
+        // Lee carrito de sesión como mapas [cedula => datos]
+        $apto   = $request->session()->get('carrito.apto', []);
+        $noApto = $request->session()->get('carrito.no_apto', []);
+
+        if (isset($apto[$ced])) {
+            return response()->json(['status' => 'exists', 'message' => 'Este usuario ya fue calificado como APTO']);
+        }
+        if (isset($noApto[$ced])) {
+            return response()->json(['status' => 'exists', 'message' => 'Este usuario ya fue calificado como NO APTO']);
+        }
+
+        $payload = [
+            'cedula' => $u->cedula,
+            'apellidos_nombres' => $u->apellidos_nombres,
+            'grado' => $u->grado,
+        ];
+
+        if ($request->input('estado') === 'APTO') {
+            $apto[$ced] = $payload;
+            $request->session()->put('carrito.apto', $apto);
+            return response()->json(['status' => 'ok', 'message' => 'Agregado como APTO', 'estado' => 'APTO']);
+        } else {
+            $noApto[$ced] = $payload;
+            $request->session()->put('carrito.no_apto', $noApto);
+            return response()->json(['status' => 'ok', 'message' => 'Agregado como NO APTO', 'estado' => 'NO_APTO']);
+        }
+    }
+
+    /**
+     * GET /usuarios/carrito
+     * Muestra las dos tablas: Aptos y No Aptos (desde sesión)
+     */
+    public function carrito(\Illuminate\Http\Request $request)
+    {
+        $aptos   = $request->session()->get('carrito.apto', []);
+        $noAptos = $request->session()->get('carrito.no_apto', []);
+
+        // Si quieres orden alfabético:
+        ksort($aptos);
+        ksort($noAptos);
+
+        return view('usuarios.carrito', [
+            'aptos'   => $aptos,
+            'noAptos' => $noAptos,
+        ]);
+    }
+
+    public function carritoEliminar(\Illuminate\Http\Request $request)
+    {
+        $request->validate([
+            'cedula' => 'required',
+            'estado' => 'required|in:APTO,NO_APTO',
+        ]);
+
+        // Normaliza cédula (reutiliza tu helper si ya existe)
+        $ced = method_exists($this, 'normCedula')
+            ? $this->normCedula($request->input('cedula'))
+            : preg_replace('/\D+/', '', (string)$request->input('cedula'));
+
+        if (!$ced) {
+            return response()->json(['status' => 'error', 'message' => 'Cédula inválida'], 422);
+        }
+
+        $key   = $request->input('estado') === 'APTO' ? 'carrito.apto' : 'carrito.no_apto';
+        $items = $request->session()->get($key, []);
+
+        if (isset($items[$ced])) {
+            unset($items[$ced]);
+            $request->session()->put($key, $items);
+            return response()->json(['status' => 'ok', 'message' => 'Eliminado del carrito']);
+        }
+
+        return response()->json(['status' => 'missing', 'message' => 'No estaba en el carrito']);
+    }
+
 
 
 }
