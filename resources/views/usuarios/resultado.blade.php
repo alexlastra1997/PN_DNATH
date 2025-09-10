@@ -105,37 +105,20 @@
                         @php
                             // Etiquetas legibles
                             $labels = [
-                              // personales / base
                               'cedula' => 'Cédula',
                               'apellidos_nombres' => 'Apellidos y Nombres',
                               'grado' => 'Grado',
                               'provincia_trabaja' => 'Provincia trabaja',
                               'estado_civil' => 'Estado civil',
                               'promocion' => 'Promoción',
-                              // educación (posibles)
                               'contrato_estudios' => 'Contrato de Estudios',
                               'nivel_educativo' => 'Nivel educativo',
-                              'titulo' => 'Título',
-                              'especialidad' => 'Especialidad',
-                              'institucion' => 'Institución',
-                              'anio_graduacion' => 'Año de graduación',
-                              // alertas
-                              'alertas' => 'Alertas',
-                              'alerta_devengacion' => 'Alerta Devengación',
-                              'alerta_marco_legal' => 'Alerta Marco Legal',
-                              'novedad_situacion' => 'Novedad Situación',
-                              'observacion_tenencia' => 'Observación Tenencia',
-                              'pase_ucp_ccp_cpl' => 'Pase UCP/CCP/CPL',
-                              'alertas_problemas_salud' => 'Alertas Problemas de Salud',
-                              'FaseMaternidadUDGA' => 'Fase Maternidad UDGA',
-                              'fase_maternidad' => 'Fase Maternidad',
-                              'maternidad' => 'Maternidad',
-                              'enf_catast_sp' => 'Enfermedad Catastrófica SP',
-                              'enf_catast_conyuge_hijos' => 'Enf. Catastrófica Cónyuge/Hijos',
-                              'discapacidad_sp' => 'Discapacidad SP',
-                              'discapacidad_conyuge_hijos' => 'Discapacidad Cónyuge/Hijos',
+                              'titulo' => 'Título','especialidad'=>'Especialidad','institucion'=>'Institución','anio_graduacion'=>'Año de graduación',
+                              'alertas' => 'Alertas','alerta_devengacion'=>'Alerta Devengación','alerta_marco_legal'=>'Alerta Marco Legal',
+                              'novedad_situacion'=>'Novedad Situación','observacion_tenencia'=>'Observación Tenencia','pase_ucp_ccp_cpl'=>'Pase UCP/CCP/CPL',
+                              'alertas_problemas_salud'=>'Alertas Problemas de Salud','FaseMaternidadUDGA'=>'Fase Maternidad UDGA','fase_maternidad'=>'Fase Maternidad','maternidad'=>'Maternidad',
+                              'enf_catast_sp'=>'Enfermedad Catastrófica SP','enf_catast_conyuge_hijos'=>'Enf. Catastrófica Cónyuge/Hijos','discapacidad_sp'=>'Discapacidad SP','discapacidad_conyuge_hijos'=>'Discapacidad Cónyuge/Hijos',
                             ];
-
                             $colsAlerta = ['alertas','alerta_devengacion','alerta_marco_legal'];
                             $colsOtros  = ['novedad_situacion','observacion_tenencia','contrato_estudios','pase_ucp_ccp_cpl'];
                             $colsSalud  = ['alertas_problemas_salud','FaseMaternidadUDGA','fase_maternidad','maternidad','enf_catast_sp','enf_catast_conyuge_hijos','discapacidad_sp','discapacidad_conyuge_hijos'];
@@ -144,19 +127,16 @@
                             $educacionFields = ['contrato_estudios','nivel_educativo','titulo','especialidad','institucion','anio_graduacion'];
 
                             $hasVal = function($v) {
-                              if ($v === null) return false;
-                              $s = strtoupper(trim((string)$v));
+                              if ($v === null) return false; $s = strtoupper(trim((string)$v));
                               return $s !== '' && !in_array($s, ['NO','N/A','NA','0'], true);
                             };
 
-                            // Estados del carrito para el indicador
                             $carApto   = session('carrito.apto', []);
                             $carNoApto = session('carrito.no_apto', []);
                         @endphp
 
                         @forelse ($usuarios as $u)
                             @php
-                                // Semáforo
                                 $hitA = []; foreach($colsAlerta as $c){ if($hasVal($u->{$c} ?? null)) $hitA[$c] = $u->{$c}; }
                                 $hitO = []; foreach($colsOtros  as $c){ if($hasVal($u->{$c} ?? null)) $hitO[$c] = $u->{$c}; }
                                 $tmpFaseUDGA = $u->{'FaseMaternidadUDGA'} ?? null;
@@ -170,7 +150,6 @@
                                 elseif(count($hitO)){ $categoria='OTROS'; $colorDot='bg-yellow-400'; $tieneAlgo=true; }
                                 elseif(count($hitS)){ $categoria='SALUD'; $colorDot='bg-sky-400'; $tieneAlgo=true; }
 
-                                // normaliza cédula para llaves e IDs
                                 $keyCed = preg_replace('/\D+/', '', (string)$u->cedula);
                                 if (strlen($keyCed) > 10) { $keyCed = substr($keyCed, -10); }
                                 $keyCed = str_pad($keyCed, 10, '0', STR_PAD_LEFT);
@@ -178,7 +157,6 @@
                                 $yaApto   = isset($carApto[$keyCed]);
                                 $yaNoApto = isset($carNoApto[$keyCed]);
 
-                                // IDs de modales
                                 $modalSemId = 'modal-' . preg_replace('/\W+/', '', (string)$u->cedula);
                                 $viewId     = 'view-'  . preg_replace('/\W+/', '', (string)$u->cedula);
                             @endphp
@@ -318,18 +296,15 @@
                                         {{-- Educación --}}
                                         <section>
                                             <h4 class="text-xs font-bold uppercase tracking-wider text-gray-600 dark:text-gray-300 mb-2">Educación</h4>
-                                            @php
-                                                $eduShown = false;
-                                            @endphp
+                                            @php $eduShown = false; @endphp
                                             <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                                                 @foreach($educacionFields as $f)
                                                     @php $val = ($f==='FaseMaternidadUDGA') ? ($u->{'FaseMaternidadUDGA'} ?? null) : ($u->{$f} ?? null); @endphp
-                                                    @if($hasVal($val))
-                                                        @php $eduShown = true; @endphp
-                                                        <div class="bg-gray-50 dark:bg-gray-700/50 rounded-md px-3 py-2">
-                                                            <div class="text-[11px] text-gray-500 dark:text-gray-400">{{ $labels[$f] ?? $f }}</div>
-                                                            <div class="font-medium text-gray-800 dark:text-gray-100">{{ $val }}</div>
-                                                        </div>
+                                                    @if($hasVal($val)) @php $eduShown = true; @endphp
+                                                    <div class="bg-gray-50 dark:bg-gray-700/50 rounded-md px-3 py-2">
+                                                        <div class="text-[11px] text-gray-500 dark:text-gray-400">{{ $labels[$f] ?? $f }}</div>
+                                                        <div class="font-medium text-gray-800 dark:text-gray-100">{{ $val }}</div>
+                                                    </div>
                                                     @endif
                                                 @endforeach
                                             </div>
@@ -338,17 +313,13 @@
                                             @endif
                                         </section>
 
-                                        {{-- Alertas (agrupadas) --}}
+                                        {{-- Alertas --}}
                                         <section>
                                             <h4 class="text-xs font-bold uppercase tracking-wider text-gray-600 dark:text-gray-300 mb-3">Alertas</h4>
-
                                             <div class="space-y-4">
                                                 @if(count($hitA))
                                                     <div>
-                                                        <div class="flex items-center gap-2 mb-2">
-                                                            <span class="inline-block w-2 h-2 rounded-full bg-red-500"></span>
-                                                            <span class="text-xs font-semibold text-red-600 dark:text-red-400">ALERTA</span>
-                                                        </div>
+                                                        <div class="flex items-center gap-2 mb-2"><span class="inline-block w-2 h-2 rounded-full bg-red-500"></span><span class="text-xs font-semibold text-red-600 dark:text-red-400">ALERTA</span></div>
                                                         <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                                                             @foreach($hitA as $k=>$v)
                                                                 <div class="bg-red-50 dark:bg-red-900/20 rounded-md px-3 py-2">
@@ -359,13 +330,9 @@
                                                         </div>
                                                     </div>
                                                 @endif
-
                                                 @if(count($hitO))
                                                     <div>
-                                                        <div class="flex items-center gap-2 mb-2">
-                                                            <span class="inline-block w-2 h-2 rounded-full bg-yellow-400"></span>
-                                                            <span class="text-xs font-semibold text-yellow-700 dark:text-yellow-300">OTROS</span>
-                                                        </div>
+                                                        <div class="flex items-center gap-2 mb-2"><span class="inline-block w-2 h-2 rounded-full bg-yellow-400"></span><span class="text-xs font-semibold text-yellow-700 dark:text-yellow-300">OTROS</span></div>
                                                         <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                                                             @foreach($hitO as $k=>$v)
                                                                 <div class="bg-yellow-50 dark:bg-yellow-900/20 rounded-md px-3 py-2">
@@ -376,13 +343,9 @@
                                                         </div>
                                                     </div>
                                                 @endif
-
                                                 @if(count($hitS))
                                                     <div>
-                                                        <div class="flex items-center gap-2 mb-2">
-                                                            <span class="inline-block w-2 h-2 rounded-full bg-sky-400"></span>
-                                                            <span class="text-xs font-semibold text-sky-700 dark:text-sky-300">SALUD</span>
-                                                        </div>
+                                                        <div class="flex items-center gap-2 mb-2"><span class="inline-block w-2 h-2 rounded-full bg-sky-400"></span><span class="text-xs font-semibold text-sky-700 dark:text-sky-300">SALUD</span></div>
                                                         <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                                                             @foreach($hitS as $k=>$v)
                                                                 <div class="bg-sky-50 dark:bg-sky-900/20 rounded-md px-3 py-2">
@@ -393,7 +356,6 @@
                                                         </div>
                                                     </div>
                                                 @endif
-
                                                 @if(!count($hitA) && !count($hitO) && !count($hitS))
                                                     <div class="text-gray-500 dark:text-gray-400 text-xs">Sin alertas registradas.</div>
                                                 @endif
@@ -408,13 +370,8 @@
                                 </div>
                             </div>
                             {{-- /MODAL VER --}}
-
                         @empty
-                            <tr>
-                                <td colspan="6" class="px-3 py-6 text-center text-gray-600 dark:text-gray-300">
-                                    No hay resultados con los filtros actuales.
-                                </td>
-                            </tr>
+                            <tr><td colspan="6" class="px-3 py-6 text-center text-gray-600 dark:text-gray-300">No hay resultados con los filtros actuales.</td></tr>
                         @endforelse
                         </tbody>
                     </table>
@@ -447,6 +404,41 @@
             <div class="px-4 py-3 border-t dark:border-gray-700 text-right">
                 <button class="px-4 py-2 rounded-md bg-gray-200 dark:bg-gray-700 text-sm text-gray-800 dark:text-gray-200" data-alert-close>Cerrar</button>
             </div>
+        </div>
+    </div>
+
+    {{-- MODAL CONFIRMAR CALIFICACIÓN (NOVEDAD) --}}
+    <div id="modal-calificar" class="fixed inset-0 z-50 hidden">
+        <div data-modal-close="modal-calificar" class="absolute inset-0 bg-black/40"></div>
+        <div class="relative z-50 mx-auto mt-24 w-[92%] max-w-lg rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-2xl">
+            <div class="px-5 py-3 border-b dark:border-gray-700 flex items-center justify-between">
+                <h3 class="text-sm font-semibold text-gray-900 dark:text-gray-100">Confirmar calificación</h3>
+                <button type="button" class="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700" data-modal-close="modal-calificar">✕</button>
+            </div>
+
+            <form id="form-calificar" class="px-5 py-4 space-y-4">
+                <input type="hidden" id="calif-cedula">
+                <input type="hidden" id="calif-estado"> {{-- APTO | NO_APTO --}}
+
+                <div>
+                    <label class="block text-xs font-medium mb-1 text-gray-700 dark:text-gray-300">Novedad</label>
+                    <select id="calif-novedad" class="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm focus:ring-0 focus:outline-none">
+                        <option value="SIN_NOVEDAD">Sin novedad</option>
+                        <option value="NOVEDAD">Con novedad</option>
+                    </select>
+                </div>
+
+                <div id="wrap-detalle" class="hidden">
+                    <label for="calif-detalle" class="block text-xs font-medium mb-1 text-gray-700 dark:text-gray-300">Detalle de la novedad</label>
+                    <textarea id="calif-detalle" rows="4" class="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm focus:ring-0 focus:outline-none" placeholder="Describe la novedad..."></textarea>
+                    <p id="detalle-error" class="text-xs text-red-600 mt-1 hidden">Debes ingresar el detalle de la novedad.</p>
+                </div>
+
+                <div class="pt-2 text-right">
+                    <button type="button" data-modal-close="modal-calificar" class="px-3 py-2 rounded-md bg-gray-200 dark:bg-gray-700 text-sm">Cancelar</button>
+                    <button type="submit" class="ml-2 px-3 py-2 rounded-md bg-primary-700 hover:bg-primary-800 text-sm text-white">Guardar</button>
+                </div>
+            </form>
         </div>
     </div>
 
@@ -503,74 +495,107 @@
                 b.addEventListener('click', () => alertModal.classList.add('hidden'));
             });
 
-            // Calificar (APTO / NO APTO)
+            // ===== Calificar (APTO / NO APTO) con modal de novedad =====
             const CALIFICAR_URL = "{{ route('usuarios.calificar') }}";
             const CSRF = (document.querySelector('meta[name=\"csrf-token\"]') || {}).content || "{{ csrf_token() }}";
 
+            // marcador al lado del nombre
             function paintMark(cedula, estado) {
                 const row  = document.querySelector(`tr[data-cedula="${cedula}"]`);
                 if (!row) return;
                 const mark = row.querySelector('.mark-calif');
                 if (!mark) return;
-
                 if (estado === 'APTO') {
                     mark.className = 'mark-calif ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-green-100 text-green-700';
-                    mark.textContent = '✓ APTO';
-                    mark.title = 'Ya seleccionado: APTO';
+                    mark.textContent = '✓ APTO'; mark.title = 'Ya seleccionado: APTO';
                 } else if (estado === 'NO_APTO') {
                     mark.className = 'mark-calif ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-red-100 text-red-700';
-                    mark.textContent = '✕ NO APTO';
-                    mark.title = 'Ya seleccionado: NO APTO';
+                    mark.textContent = '✕ NO APTO'; mark.title = 'Ya seleccionado: NO APTO';
                 }
             }
 
+            // modal calificar refs
+            const modalCalif = document.getElementById('modal-calificar');
+            const inpCedula  = document.getElementById('calif-cedula');
+            const inpEstado  = document.getElementById('calif-estado');
+            const selNovedad = document.getElementById('calif-novedad');
+            const wrapDet    = document.getElementById('wrap-detalle');
+            const txtDetalle = document.getElementById('calif-detalle');
+            const errDetalle = document.getElementById('detalle-error');
+
+            selNovedad.addEventListener('change', () => {
+                if (selNovedad.value === 'NOVEDAD') {
+                    wrapDet.classList.remove('hidden'); txtDetalle.focus();
+                } else {
+                    wrapDet.classList.add('hidden'); txtDetalle.value = ''; errDetalle.classList.add('hidden');
+                }
+            });
+
+            // Abre el modal de novedad cuando se elige APTO/NO_APTO
             document.querySelectorAll('[data-action]').forEach(a => {
-                a.addEventListener('click', async (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
+                a.addEventListener('click', (e) => {
+                    e.preventDefault(); e.stopPropagation();
                     const action = a.getAttribute('data-action'); // ver | apto | no_apto
                     const cedula = a.getAttribute('data-cedula');
-
-                    // VER -> abre el modal de ficha
                     if (action === 'ver') {
                         const viewId = a.getAttribute('data-view-id');
                         const modal  = document.getElementById(viewId);
                         if (modal) modal.classList.remove('hidden');
-                        // cierra el menú
                         const menu = a.closest('[id^="menu-"]'); if (menu) menu.classList.add('hidden');
                         return;
                     }
+                    // setea estado y cédula
+                    inpCedula.value = cedula;
+                    inpEstado.value = (action === 'apto') ? 'APTO' : 'NO_APTO';
+                    selNovedad.value = 'SIN_NOVEDAD';
+                    wrapDet.classList.add('hidden'); txtDetalle.value = ''; errDetalle.classList.add('hidden');
 
-                    // APTO / NO APTO
-                    const estado = (action === 'apto') ? 'APTO' : 'NO_APTO';
+                    modalCalif.classList.remove('hidden');
 
-                    try {
-                        const res = await fetch(CALIFICAR_URL, {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'X-CSRF-TOKEN': CSRF,
-                                'Accept': 'application/json',
-                            },
-                            body: JSON.stringify({ cedula, estado })
-                        });
-                        const data = await res.json();
-
-                        if (data.status === 'ok') {
-                            showAlert(`Usuario ${cedula} agregado al carrito como ${data.estado}.`);
-                            paintMark(cedula, data.estado);
-                        } else if (data.status === 'exists') {
-                            showAlert(data.message || 'Este usuario ya fue calificado.');
-                        } else {
-                            showAlert(data.message || 'No se pudo calificar.');
-                        }
-                    } catch (err) {
-                        showAlert('Error de red o servidor.');
-                    }
-
+                    // cierra el menú
                     const menu = a.closest('[id^="menu-"]'); if (menu) menu.classList.add('hidden');
                 });
             });
+
+            // Enviar confirmación
+            document.getElementById('form-calificar').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const cedula  = inpCedula.value;
+                const estado  = inpEstado.value;
+                const novedad = selNovedad.value;
+                const detalle = txtDetalle.value.trim();
+
+                if (novedad === 'NOVEDAD' && !detalle) {
+                    errDetalle.classList.remove('hidden'); txtDetalle.focus(); return;
+                } else {
+                    errDetalle.classList.add('hidden');
+                }
+
+                try {
+                    const res = await fetch(CALIFICAR_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json','X-CSRF-TOKEN': CSRF,'Accept':'application/json' },
+                        body: JSON.stringify({ cedula, estado, novedad, detalle_novedad: detalle })
+                    });
+                    const data = await res.json();
+
+                    if (data.status === 'ok') {
+                        showAlert(`Usuario ${cedula} agregado al carrito como ${data.estado}${novedad==='NOVEDAD' ? ' (con novedad)' : ''}.`);
+                        paintMark(cedula, data.estado);
+                        modalCalif.classList.add('hidden');
+                    } else if (data.status === 'exists') {
+                        showAlert(data.message || 'Este usuario ya fue calificado.');
+                    } else {
+                        showAlert(data.message || 'No se pudo calificar.');
+                    }
+                } catch (err) {
+                    showAlert('Error de red o servidor.');
+                }
+            });
         });
     </script>
+
+
+
+
 @endsection

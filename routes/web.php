@@ -18,7 +18,7 @@ use App\Http\Controllers\ReporteOrganicoVisualController;
 use App\Http\Controllers\TrasladoController;
 use App\Http\Controllers\TruequeController;
 use Illuminate\Pagination\LengthAwarePaginator;
-
+use App\Http\Controllers\GenerarPasesController;
 
 
 // Login
@@ -68,6 +68,10 @@ Route::middleware('auth')->group(function () {
         '/reporte-organico/exportar-resumen-xlsx',
         [ReporteOrganicoVisualController::class, 'exportResumenXlsx']
     )->name('reporte_organico.exportar_resumen_xlsx');
+
+
+    Route::get('/usuarios/informe.pdf', [UsuarioController::class, 'informePdf'])
+        ->name('usuarios.informe.pdf');
 
 
     Route::delete('/usuarios/seleccionados/{id}', [UsuarioController::class, 'eliminarSeleccionado'])->name('usuarios.eliminarSeleccionado');
@@ -149,5 +153,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/reporte-organico/exportar', [ReporteOrganicoVisualController::class, 'exportarExcel'])->name('reporte_organico.exportar');
     Route::get('/reporte-organico/estadisticas', [ReporteOrganicoVisualController::class, 'obtenerEstadisticas'])->name('reporte_organico.estadisticas');
 
+
+    Route::get('/generar-pases', [GenerarPasesController::class, 'index'])
+        ->name('generar_pases.index');
 });
 
