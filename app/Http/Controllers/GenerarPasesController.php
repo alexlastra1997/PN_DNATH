@@ -7,6 +7,8 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Arr;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Schema;
+
 
 class GenerarPasesController extends Controller
 {
@@ -112,13 +114,6 @@ class GenerarPasesController extends Controller
         if (!empty($funSel)) $base->whereIn('funcion_efectiva', $funSel);
         if (!empty($estSel)) $base->whereIn('estado_efectivo', $estSel);
 
-        // ===== NUEVO: FASE MATERNIDAD O LACTANCIA (múltiple, unión de dos columnas) =====
-        if (!empty($faseMLSel)) {
-            $base->where(function($q) use ($faseMLSel) {
-                $q->whereIn('FaseMaternidadUDGA', $faseMLSel)
-                    ->orWhereIn('fase_maternidad',   $faseMLSel);
-            });
-        }
 
         // ===== EXCLUIR por ALERTAS (cualquiera) =====
         $alertTexts = [];
@@ -157,27 +152,44 @@ class GenerarPasesController extends Controller
             'novedad_situacion',
             'observacion_tenencia',
             'alertas_problemas_salud',
+            // NUEVOS: fases de maternidad (excluir si tienen cualquier valor)
+            'fase_maternidad',       // Fase Maternidad 1
+            'FaseMaternidadUDGA',    // Fase Maternidad 2
         ];
+
         $flagsSel = array_values(array_intersect($flagsSel, $flagColsAll));
 
         if (!empty($flagsSel)) {
             $base->where(function($AND) use ($flagsSel) {
                 foreach ($flagsSel as $col) {
                     $AND->where(function($no) use ($col) {
-                        $expr = "UPPER(TRIM(COALESCE($col,'')))";
+                        $expr  = "TRIM(COALESCE($col,''))";
+                        $exprU = "UPPER($expr)";
+
+                        // Fase Maternidad 1 y 2: mantener SOLO filas donde está vacío o nulo
+                        if (in_array($col, ['fase_maternidad','FaseMaternidadUDGA'], true)) {
+                            $no->whereNull($col)
+                                ->orWhereRaw("$expr = ''");
+                            return;
+                        }
+
+                        // Campos de texto que aceptan “sin novedad”
                         if (in_array($col, ['novedad_situacion','observacion_tenencia'], true)) {
                             $no->whereNull($col)
                                 ->orWhereRaw("$expr = ''")
-                                ->orWhereRaw("$expr IN ('SIN NOVEDAD','SIN_NOVEDAD','NINGUNA','NINGUNO','N/A','NA')");
-                        } else {
-                            $no->whereNull($col)
-                                ->orWhereRaw("$expr = ''")
-                                ->orWhereRaw("$expr IN ('0','NO','N','FALSE')");
+                                ->orWhereRaw("$exprU IN ('SIN NOVEDAD','SIN_NOVEDAD','NINGUNA','NINGUNO','N/A','NA')");
+                            return;
                         }
+
+                        // Resto de banderas: considerar vacíos/negativos como “no aplica”
+                        $no->whereNull($col)
+                            ->orWhereRaw("$expr = ''")
+                            ->orWhereRaw("$exprU IN ('0','NO','N','FALSE')");
                     });
                 }
             });
         }
+
 
         // ===== Requerimientos por grado (subset) =====
         $req = (array) $request->query('req_grados', []);
@@ -202,7 +214,7 @@ class GenerarPasesController extends Controller
                 ['path' => $request->url(), 'query' => $request->query()]
             );
         } else {
-            $usuarios = (clone $base)->orderBy('cedula')->paginate($perPage)->appends($request->query());
+            $usuarios = (clone $base)->paginate($perPage)->appends($request->query());
         }
 
         return view('generar_pases.index', [
