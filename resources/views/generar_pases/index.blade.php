@@ -574,6 +574,10 @@
                 <div class="mt-3 flex gap-2">
                     <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-md text-xs hover:bg-blue-700">Aplicar filtros</button>
                     <a href="{{ route('generar_pases.index') }}" class="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-100 rounded-md text-xs">Limpiar</a>
+                    <button type="submit" name="export" value="excel"
+                            class="px-4 py-2 bg-emerald-600 text-white rounded-md text-xs hover:bg-emerald-700">
+                        Exportar base
+                    </button>
                 </div>
 
             </form>

@@ -19,6 +19,8 @@ use App\Http\Controllers\TrasladoController;
 use App\Http\Controllers\TruequeController;
 use Illuminate\Pagination\LengthAwarePaginator;
 use App\Http\Controllers\GenerarPasesController;
+use App\Http\Controllers\ComparadorExcelController;
+
 
 
 // Login
@@ -156,5 +158,11 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/generar-pases', [GenerarPasesController::class, 'index'])
         ->name('generar_pases.index');
+
+
+    Route::get('/comparador-excel', [ComparadorExcelController::class, 'index'])->name('comparador.index');
+    Route::post('/comparador-excel/procesar', [ComparadorExcelController::class, 'procesar'])->name('comparador.procesar');
+    Route::post('/comparador-excel/exportar', [ComparadorExcelController::class, 'exportar'])->name('comparador.exportar');
+
 });
 

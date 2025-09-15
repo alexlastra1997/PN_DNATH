@@ -8,6 +8,10 @@ use Illuminate\Support\Arr;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Schema;
+use Maatwebsite\Excel\Facades\Excel;
+use Maatwebsite\Excel\Concerns\FromArray;
+use Maatwebsite\Excel\Concerns\WithHeadings;
+use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 
 
 class GenerarPasesController extends Controller
@@ -75,7 +79,7 @@ class GenerarPasesController extends Controller
         $nomSel         = Arr::wrap($request->query('nomenclatura_efectiva', []));
         $funSel         = Arr::wrap($request->query('funcion_efectiva', []));
         $estSel         = Arr::wrap($request->query('estado_efectivo', []));
-        $faseMLSel      = Arr::wrap($request->query('fase_ml', [])); // << NUEVO
+        $faseMLSel      = Arr::wrap($request->query('fase_ml', [])); // << NUEVO (se mantiene)
 
         // ===== Query base =====
         $base = DB::table('usuarios');
@@ -113,7 +117,6 @@ class GenerarPasesController extends Controller
         if (!empty($nomSel)) $base->whereIn('nomenclatura_efectiva', $nomSel);
         if (!empty($funSel)) $base->whereIn('funcion_efectiva', $funSel);
         if (!empty($estSel)) $base->whereIn('estado_efectivo', $estSel);
-
 
         // ===== EXCLUIR por ALERTAS (cualquiera) =====
         $alertTexts = [];
@@ -156,7 +159,6 @@ class GenerarPasesController extends Controller
             'fase_maternidad',       // Fase Maternidad 1
             'FaseMaternidadUDGA',    // Fase Maternidad 2
         ];
-
         $flagsSel = array_values(array_intersect($flagsSel, $flagColsAll));
 
         if (!empty($flagsSel)) {
@@ -190,6 +192,46 @@ class GenerarPasesController extends Controller
             });
         }
 
+        // ===== (NUEVO) Exportar a Excel si se solicitó =====
+        $isExport = $request->query('export') === 'excel';
+        $selectCols = [
+            'cedula','apellidos_nombres','grado','sexo','tipo_personal',
+            'fecha_efectiva','nomenclatura_efectiva','funcion_efectiva','estado_efectivo'
+        ];
+        $headersMap = [
+            'cedula'                => 'Cédula',
+            'apellidos_nombres'     => 'Apellidos Nombres',
+            'grado'                 => 'Grado',
+            'sexo'                  => 'Sexo',
+            'tipo_personal'         => 'Tipo',
+            'fecha_efectiva'        => 'Fecha efectiva',
+            'nomenclatura_efectiva' => 'Nomenclatura efectiva',
+            'funcion_efectiva'      => 'Función efectiva',
+            'estado_efectivo'       => 'Estado efectivo',
+        ];
+        $exportExcel = function($rows) use ($headersMap) {
+            $data = [];
+            $order = array_keys($headersMap);
+            foreach ($rows as $r) {
+                $line = [];
+                foreach ($order as $k) {
+                    $line[] = data_get($r, $k, '');
+                }
+                $data[] = $line;
+            }
+
+            $export = new class($data, array_values($headersMap))
+                implements \Maatwebsite\Excel\Concerns\FromArray,
+                \Maatwebsite\Excel\Concerns\WithHeadings,
+                \Maatwebsite\Excel\Concerns\ShouldAutoSize {
+                public function __construct(private array $data, private array $headings) {}
+                public function array(): array    { return $this->data; }
+                public function headings(): array { return $this->headings; }
+            };
+
+            $filename = 'usuarios_filtrados_'.now()->format('Ymd_His').'.xlsx';
+            return \Maatwebsite\Excel\Facades\Excel::download($export, $filename);
+        };
 
         // ===== Requerimientos por grado (subset) =====
         $req = (array) $request->query('req_grados', []);
@@ -202,10 +244,16 @@ class GenerarPasesController extends Controller
                 if ($n <= 0) continue;
                 $subset = (clone $base)->where('grado', $grado)
                     ->orderBy('cedula')
+                    ->select($selectCols) // para export y para mantener columnas uniformes
                     ->limit($n)->get();
                 $seleccionados = $seleccionados->concat($subset);
             }
             $seleccionados = $seleccionados->unique('cedula')->values();
+
+            // Si pidieron Excel, lo descargamos con el subset seleccionado
+            if ($isExport) {
+                return $exportExcel($seleccionados);
+            }
 
             $currentPage = LengthAwarePaginator::resolveCurrentPage();
             $items = $seleccionados->forPage($currentPage, $perPage)->values();
@@ -214,7 +262,13 @@ class GenerarPasesController extends Controller
                 ['path' => $request->url(), 'query' => $request->query()]
             );
         } else {
-            $usuarios = (clone $base)->paginate($perPage)->appends($request->query());
+            // Si pidieron Excel, exportar todo el resultado filtrado (sin paginar)
+            if ($isExport) {
+                $rows = (clone $base)->orderBy('cedula')->select($selectCols)->get();
+                return $exportExcel($rows);
+            }
+
+            $usuarios = (clone $base)->orderBy('cedula')->paginate($perPage)->appends($request->query());
         }
 
         return view('generar_pases.index', [
@@ -228,7 +282,7 @@ class GenerarPasesController extends Controller
             'funciones'        => $funciones,
             'estadosEfectivos' => $estadosEfectivos,
             'alertCatalog'     => $alertCatalog,
-            'faseMLCatalog'    => $faseMLCatalog,   // << NUEVO
+            'faseMLCatalog'    => $faseMLCatalog,   // se mantiene
             // Rehidratación
             'promSel'          => $promSel,
             'provTrabSel'      => $provTrabSel,
@@ -238,7 +292,7 @@ class GenerarPasesController extends Controller
             'nomSel'           => $nomSel,
             'funSel'           => $funSel,
             'estSel'           => $estSel,
-            'faseMLSel'        => $faseMLSel,       // << NUEVO
+            'faseMLSel'        => $faseMLSel,       // se mantiene
         ]);
     }
 
@@ -267,4 +321,41 @@ class GenerarPasesController extends Controller
         }
         return [$catalog, $map];
     }
+
+    private function downloadExcel($rows, $filename = 'usuarios_filtrados')
+    {
+        // Columnas en el mismo orden de tu tabla
+        $cols = [
+            'cedula'                => 'Cédula',
+            'apellidos_nombres'     => 'Apellidos Nombres',
+            'grado'                 => 'Grado',
+            'sexo'                  => 'Sexo',
+            'tipo_personal'         => 'Tipo',
+            'fecha_efectiva'        => 'Fecha efectiva',
+            'nomenclatura_efectiva' => 'Nomenclatura efectiva',
+            'funcion_efectiva'      => 'Función efectiva',
+            'estado_efectivo'       => 'Estado efectivo',
+        ];
+
+        // Convertimos la colección/array de filas al arreglo que Excel requiere
+        $data = [];
+        foreach ($rows as $r) {
+            $line = [];
+            foreach (array_keys($cols) as $k) {
+                $line[] = data_get($r, $k, '');
+            }
+            $data[] = $line;
+        }
+
+        // Export anónimo (sin crear clase aparte)
+        $export = new class($data, array_values($cols)) implements FromArray, WithHeadings, ShouldAutoSize {
+            public function __construct(private array $data, private array $headings) {}
+            public function array(): array    { return $this->data; }
+            public function headings(): array { return $this->headings; }
+        };
+
+        return Excel::download($export, $filename.'_'.now()->format('Ymd_His').'.xlsx');
+    }
+
+
 }
