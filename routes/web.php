@@ -145,15 +145,17 @@ Route::middleware('auth')->group(function () {
     Route::get('/trueque', [TruequeController::class, 'index'])->name('trueque.index');
     Route::post('/procesar-trueque', [TruequeController::class, 'procesar'])->name('trueque.procesar');
 
-    Route::get('/reporte-organico', [ReporteOrganicoController::class, 'index'])->name('reporte-organico.index');
 
-    Route::get('/reporte-organico/importar', [ReporteOrganicoController::class, 'showForm'])->name('reporte.form');
-    Route::post('/reporte-organico/importar', [ReporteOrganicoController::class, 'importar'])->name('reporte.importar');
-    Route::get('/visualizador-organico', [ReporteOrganicoVisualController::class, 'index'])->name('reporte_organico.visualizador');
-    Route::get('/reporte-organico/ocupantes', [ReporteOrganicoVisualController::class, 'ocupantes'])->name('reporte_organico.ocupantes');
+    Route::prefix('reporte-organico')->name('reporte_organico.')->group(function () {
+        Route::get('/',               [ReporteOrganicoVisualController::class, 'index'])->name('index');
+        Route::get('/ocupantes',      [ReporteOrganicoVisualController::class, 'ocupantes'])->name('ocupantes');
 
-    Route::get('/reporte-organico/exportar', [ReporteOrganicoVisualController::class, 'exportarExcel'])->name('reporte_organico.exportar');
-    Route::get('/reporte-organico/estadisticas', [ReporteOrganicoVisualController::class, 'obtenerEstadisticas'])->name('reporte_organico.estadisticas');
+        // Export detallado con los filtros del visualizador
+        Route::get('/exportar-excel', [ReporteOrganicoVisualController::class, 'exportarExcel'])->name('exportarExcel');
+
+        // (Opcional) Export de resumen por subsistema con los filtros del visualizador
+        Route::get('/export-resumen', [ReporteOrganicoVisualController::class, 'exportResumenXlsx'])->name('exportResumenXlsx');
+    });
 
 
     Route::get('/generar-pases', [GenerarPasesController::class, 'index'])

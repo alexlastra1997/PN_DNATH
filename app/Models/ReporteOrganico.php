@@ -18,5 +18,6 @@ class ReporteOrganico extends Model
         'grado_organico',
         'personal_organico',
         'numero_organico_ideal',
+        'subsistema',
     ];
 }

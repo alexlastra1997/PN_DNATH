@@ -1,417 +1,682 @@
-{{-- resources/views/reporte_organico/visualizador.blade.php --}}
 @extends('layouts.app')
 
 @section('content')
-    <div class="container mx-auto px-4">
-        <h1 class="text-xl font-bold mb-4">Visualizador Orgánico</h1>
+    <div class="p-4 max-w-screen-2xl mx-auto dark:text-white">
 
-        {{-- Filtros --}}
-        <form method="GET" action="{{ route('reporte_organico.visualizador') }}" class="mb-6 grid grid-cols-1 md:grid-cols-5 gap-4">
-            <input type="text" name="servicio" value="{{ request('servicio') }}" placeholder="Buscar Servicio" class="px-3 py-2 border rounded">
-            <input type="text" name="nomenclatura" value="{{ request('nomenclatura') }}" placeholder="Buscar Nomenclatura" class="px-3 py-2 border rounded">
-            <input type="text" name="cargo" value="{{ request('cargo') }}" placeholder="Buscar Cargo" class="px-3 py-2 border rounded">
+        <h2 class="text-lg font-semibold mb-4 text-gray-900 dark:text-white">
+            Reporte orgánico — Visualizador
+        </h2>
 
-            {{-- Selector de Estado --}}
-            <select name="estado" class="px-3 py-2 border rounded">
-                <option value="">-- Estado --</option>
-                <option value="COMPLETO" {{ request('estado') == 'COMPLETO' ? 'selected' : '' }}>COMPLETO</option>
-                <option value="EXCEDIDO" {{ request('estado') == 'EXCEDIDO' ? 'selected' : '' }}>EXCEDIDO</option>
-                <option value="VACANTE"   {{ request('estado') == 'VACANTE'   ? 'selected' : '' }}>VACANTE</option>
-            </select>
+        {{-- =========================== FILTROS =========================== --}}
+        <form method="GET" class="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-6 items-end">
 
-            <div class="flex gap-2">
-                <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded w-full md:w-auto">
-                    Buscar
+            {{-- Servicio (multi con checkboxes + buscador) --}}
+            @php $selServicio = (array) request('servicio', []); @endphp
+            <div data-dd class="relative">
+                <label class="block text-xs font-semibold mb-1">Servicio</label>
+                <button type="button" data-dd-btn
+                        class="w-full inline-flex items-center justify-between rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm">
+                    <span class="truncate" data-dd-label>Selecciona servicios</span>
+                    <span class="ml-2 inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1 rounded bg-blue-600 text-white text-xs hidden" data-dd-count></span>
                 </button>
-                <a href="{{ route('reporte_organico.visualizador') }}" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded w-full md:w-auto text-center">
+
+                <div data-dd-panel
+                     class="hidden absolute z-40 mt-1 w-[min(28rem,90vw)] rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-lg">
+                    <div class="p-2 border-b border-gray-200 dark:border-gray-700">
+                        <input type="text" data-dd-search placeholder="Buscar servicio..."
+                               class="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-2 py-1.5 text-sm">
+                    </div>
+                    <div class="max-h-64 overflow-y-auto text-sm" data-dd-list>
+                        @foreach($opcionesServicio as $opt)
+                            @php $checked = in_array($opt, $selServicio, true); @endphp
+                            <label class="flex items-center gap-2 px-3 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer">
+                                <input type="checkbox" name="servicio[]" value="{{ $opt }}" @checked($checked)
+                                class="rounded border-gray-300 dark:border-gray-600">
+                                <span class="truncate" title="{{ $opt }}">{{ $opt }}</span>
+                            </label>
+                        @endforeach
+                    </div>
+                    <div class="p-2 border-t border-gray-200 dark:border-gray-700 flex items-center gap-2">
+                        <button type="button" data-dd-select-all class="px-2 py-1 text-xs rounded bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700">Seleccionar todo</button>
+                        <button type="button" data-dd-clear class="px-2 py-1 text-xs rounded bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700">Limpiar</button>
+                        <span class="ml-auto text-[11px] text-gray-500 dark:text-gray-400">Enter/Esc para cerrar</span>
+                    </div>
+                </div>
+            </div>
+
+            {{-- Nomenclatura --}}
+            @php $selNom = (array) request('nomenclatura', []); @endphp
+            <div data-dd class="relative">
+                <label class="block text-xs font-semibold mb-1">Nomenclatura</label>
+                <button type="button" data-dd-btn
+                        class="w-full inline-flex items-center justify-between rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm">
+                    <span class="truncate" data-dd-label>Selecciona nomenclaturas</span>
+                    <span class="ml-2 inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1 rounded bg-blue-600 text-white text-xs hidden" data-dd-count></span>
+                </button>
+
+                <div data-dd-panel
+                     class="hidden absolute z-40 mt-1 w-[min(28rem,90vw)] rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-lg">
+                    <div class="p-2 border-b border-gray-200 dark:border-gray-700">
+                        <input type="text" data-dd-search placeholder="Buscar nomenclatura..."
+                               class="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-2 py-1.5 text-sm">
+                    </div>
+                    <div class="max-h-64 overflow-y-auto text-sm" data-dd-list>
+                        @foreach($opcionesNomenclatura as $opt)
+                            @php $checked = in_array($opt, $selNom, true); @endphp
+                            <label class="flex items-center gap-2 px-3 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer">
+                                <input type="checkbox" name="nomenclatura[]" value="{{ $opt }}" @checked($checked)
+                                class="rounded border-gray-300 dark:border-gray-600">
+                                <span class="truncate" title="{{ $opt }}">{{ $opt }}</span>
+                            </label>
+                        @endforeach
+                    </div>
+                    <div class="p-2 border-t border-gray-200 dark:border-gray-700 flex items-center gap-2">
+                        <button type="button" data-dd-select-all class="px-2 py-1 text-xs rounded bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700">Seleccionar todo</button>
+                        <button type="button" data-dd-clear class="px-2 py-1 text-xs rounded bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700">Limpiar</button>
+                        <span class="ml-auto text-[11px] text-gray-500 dark:text-gray-400">Enter/Esc para cerrar</span>
+                    </div>
+                </div>
+            </div>
+
+            {{-- Cargo --}}
+            @php $selCargo = (array) request('cargo', []); @endphp
+            <div data-dd class="relative">
+                <label class="block text-xs font-semibold mb-1">Cargo</label>
+                <button type="button" data-dd-btn
+                        class="w-full inline-flex items-center justify-between rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm">
+                    <span class="truncate" data-dd-label>Selecciona cargos</span>
+                    <span class="ml-2 inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1 rounded bg-blue-600 text-white text-xs hidden" data-dd-count></span>
+                </button>
+
+                <div data-dd-panel
+                     class="hidden absolute z-40 mt-1 w-[min(28rem,90vw)] rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-lg">
+                    <div class="p-2 border-b border-gray-200 dark:border-gray-700">
+                        <input type="text" data-dd-search placeholder="Buscar cargo..."
+                               class="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-2 py-1.5 text-sm">
+                    </div>
+                    <div class="max-h-64 overflow-y-auto text-sm" data-dd-list>
+                        @foreach($opcionesCargo as $opt)
+                            @php $checked = in_array($opt, $selCargo, true); @endphp
+                            <label class="flex items-center gap-2 px-3 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer">
+                                <input type="checkbox" name="cargo[]" value="{{ $opt }}" @checked($checked)
+                                class="rounded border-gray-300 dark:border-gray-600">
+                                <span class="truncate" title="{{ $opt }}">{{ $opt }}</span>
+                            </label>
+                        @endforeach
+                    </div>
+                    <div class="p-2 border-t border-gray-200 dark:border-gray-700 flex items-center gap-2">
+                        <button type="button" data-dd-select-all class="px-2 py-1 text-xs rounded bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700">Seleccionar todo</button>
+                        <button type="button" data-dd-clear class="px-2 py-1 text-xs rounded bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700">Limpiar</button>
+                        <span class="ml-auto text-[11px] text-gray-500 dark:text-gray-400">Enter/Esc para cerrar</span>
+                    </div>
+                </div>
+            </div>
+
+            {{-- Estado (VACANTE/COMPLETO/EXCEDIDO) --}}
+            @php $selEstado = (array) request('estado', []); $estados = ['VACANTE','COMPLETO','EXCEDIDO']; @endphp
+            <div data-dd class="relative">
+                <label class="block text-xs font-semibold mb-1">Estado</label>
+                <button type="button" data-dd-btn
+                        class="w-full inline-flex items-center justify-between rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm">
+                    <span class="truncate" data-dd-label>Selecciona estados</span>
+                    <span class="ml-2 inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1 rounded bg-blue-600 text-white text-xs hidden" data-dd-count></span>
+                </button>
+
+                <div data-dd-panel
+                     class="hidden absolute z-40 mt-1 w-[min(22rem,90vw)] rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-lg">
+                    <div class="p-2 border-b border-gray-200 dark:border-gray-700">
+                        <input type="text" data-dd-search placeholder="Buscar estado..."
+                               class="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-2 py-1.5 text-sm">
+                    </div>
+                    <div class="max-h-52 overflow-y-auto text-sm" data-dd-list>
+                        @foreach($estados as $opt)
+                            @php $checked = in_array($opt, $selEstado, true); @endphp
+                            <label class="flex items-center gap-2 px-3 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer">
+                                <input type="checkbox" name="estado[]" value="{{ $opt }}" @checked($checked)
+                                class="rounded border-gray-300 dark:border-gray-600">
+                                <span>{{ $opt }}</span>
+                            </label>
+                        @endforeach
+                    </div>
+                    <div class="p-2 border-t border-gray-200 dark:border-gray-700 flex items-center gap-2">
+                        <button type="button" data-dd-select-all class="px-2 py-1 text-xs rounded bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700">Seleccionar todo</button>
+                        <button type="button" data-dd-clear class="px-2 py-1 text-xs rounded bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700">Limpiar</button>
+                        <span class="ml-auto text-[11px] text-gray-500 dark:text-gray-400">Enter/Esc para cerrar</span>
+                    </div>
+                </div>
+            </div>
+
+            {{-- Grado orgánico --}}
+            @php $selGrado = (array) request('grado_organico', []); @endphp
+            <div data-dd class="relative">
+                <label class="block text-xs font-semibold mb-1">Grado orgánico</label>
+                <button type="button" data-dd-btn
+                        class="w-full inline-flex items-center justify-between rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm">
+                    <span class="truncate" data-dd-label>Selecciona grados</span>
+                    <span class="ml-2 inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1 rounded bg-blue-600 text-white text-xs hidden" data-dd-count></span>
+                </button>
+
+                <div data-dd-panel
+                     class="hidden absolute z-40 mt-1 w-[min(24rem,90vw)] rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-lg">
+                    <div class="p-2 border-b border-gray-200 dark:border-gray-700">
+                        <input type="text" data-dd-search placeholder="Buscar grado..."
+                               class="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-2 py-1.5 text-sm">
+                    </div>
+                    <div class="max-h-64 overflow-y-auto text-sm" data-dd-list>
+                        @foreach($opcionesGrado as $g)
+                            @php $checked = in_array($g, $selGrado, true); @endphp
+                            <label class="flex items-center gap-2 px-3 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer">
+                                <input type="checkbox" name="grado_organico[]" value="{{ $g }}" @checked($checked)
+                                class="rounded border-gray-300 dark:border-gray-600">
+                                <span>{{ $g }}</span>
+                            </label>
+                        @endforeach
+                    </div>
+                    <div class="p-2 border-t border-gray-200 dark:border-gray-700 flex items-center gap-2">
+                        <button type="button" data-dd-select-all class="px-2 py-1 text-xs rounded bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700">Seleccionar todo</button>
+                        <button type="button" data-dd-clear class="px-2 py-1 text-xs rounded bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700">Limpiar</button>
+                        <span class="ml-auto text-[11px] text-gray-500 dark:text-gray-400">Enter/Esc para cerrar</span>
+                    </div>
+                </div>
+            </div>
+
+            {{-- Subsistema --}}
+            @php $selSubs = (array) request('subsistema', []); @endphp
+            <div data-dd class="relative">
+                <label class="block text-xs font-semibold mb-1">Subsistema</label>
+                <button type="button" data-dd-btn
+                        class="w-full inline-flex items-center justify-between rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm">
+                    <span class="truncate" data-dd-label>Selecciona subsistemas</span>
+                    <span class="ml-2 inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1 rounded bg-blue-600 text-white text-xs hidden" data-dd-count></span>
+                </button>
+
+                <div data-dd-panel
+                     class="hidden absolute z-40 mt-1 w-[min(26rem,90vw)] rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-lg">
+                    <div class="p-2 border-b border-gray-200 dark:border-gray-700">
+                        <input type="text" data-dd-search placeholder="Buscar subsistema..."
+                               class="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-2 py-1.5 text-sm">
+                    </div>
+                    <div class="max-h-64 overflow-y-auto text-sm" data-dd-list>
+                        @foreach($opcionesSubsistema as $s)
+                            @php $checked = in_array($s, $selSubs, true); @endphp
+                            <label class="flex items-center gap-2 px-3 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer">
+                                <input type="checkbox" name="subsistema[]" value="{{ $s }}" @checked($checked)
+                                class="rounded border-gray-300 dark:border-gray-600">
+                                <span class="truncate" title="{{ $s }}">{{ $s }}</span>
+                            </label>
+                        @endforeach
+                    </div>
+                    <div class="p-2 border-t border-gray-200 dark:border-gray-700 flex items-center gap-2">
+                        <button type="button" data-dd-select-all class="px-2 py-1 text-xs rounded bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700">Seleccionar todo</button>
+                        <button type="button" data-dd-clear class="px-2 py-1 text-xs rounded bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700">Limpiar</button>
+                        <span class="ml-auto text-[11px] text-gray-500 dark:text-gray-400">Enter/Esc para cerrar</span>
+                    </div>
+                </div>
+            </div>
+
+            {{-- Botones --}}
+            <div class="sm:col-span-2 lg:col-span-6 flex flex-wrap gap-2">
+                <button type="submit"
+                        class="inline-flex items-center justify-center px-3 py-2 text-sm font-medium rounded-md
+                           bg-blue-600 text-white hover:bg-blue-700">
+                    Filtrar
+                </button>
+
+                <a href="{{ route('reporte_organico.index') }}"
+                   class="inline-flex items-center justify-center px-3 py-2 text-sm font-medium rounded-md
+                      bg-gray-100 text-gray-800 hover:bg-gray-200 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600">
                     Limpiar
                 </a>
+
+                <a href="{{ route('reporte_organico.exportarExcel', request()->query()) }}"
+                   class="inline-flex items-center justify-center px-3 py-2 text-sm font-medium rounded-md
+                      bg-emerald-600 text-white hover:bg-emerald-700">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1.5" viewBox="0 0 20 20" fill="currentColor">
+                        <path d="M3 14a1 1 0 011-1h3v-3h4v3h3a1 1 0 011 1v2a2 2 0 01-2 2H5a2 2 0 01-2-2v-2z"/>
+                        <path d="M7 7h2V3h2v4h2l-3 3-3-3z"/>
+                    </svg>
+                    Descargar Excel
+                </a>
+
+                <button type="button" onclick="openSubsistemaModal()"
+                        class="ml-auto inline-flex items-center justify-center px-3 py-2 text-sm font-medium rounded-md
+                           bg-indigo-600 text-white hover:bg-indigo-700">
+                    Ver resumen por subsistema
+                </button>
             </div>
         </form>
 
-        {{-- Exportar Excel (mantiene tus filtros) --}}
-        <form action="{{ route('reporte_organico.exportar') }}" method="GET" class="mb-4">
-            <input type="hidden" name="servicio"     value="{{ request('servicio') }}">
-            <input type="hidden" name="nomenclatura" value="{{ request('nomenclatura') }}">
-            <input type="hidden" name="cargo"        value="{{ request('cargo') }}">
-            <input type="hidden" name="estado"       value="{{ request('estado') }}">
-            <button type="submit" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
-                Descargar Excel
-            </button>
-        </form>
+        {{-- =========================== RESUMEN =========================== --}}
+        <div class="mb-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div class="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-3">
+                <div class="text-xs text-gray-500 dark:text-gray-300">Orgánico aprobado (suma)</div>
+                <div class="text-xl font-semibold">{{ number_format($totales->total_aprobado ?? 0) }}</div>
+            </div>
+            <div class="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-3">
+                <div class="text-xs text-gray-500 dark:text-gray-300">Orgánico efectivo (suma)</div>
+                <div class="text-xl font-semibold">{{ number_format($totales->total_efectivo ?? 0) }}</div>
+            </div>
+        </div>
 
-        {{-- Accordion: Conteo por Servicio (Flowbite data-accordion) --}}
-        {{-- Accordion nativo: Conteo por Servicio (sin JS, sin Flowbite) --}}
-        @if(isset($conteoServicios) && $conteoServicios->count())
-            <details class="mb-6 group bg-white border border-gray-200 rounded-lg">
-                <summary class="list-none cursor-pointer select-none flex items-center justify-between w-full p-4 font-medium text-gray-700 hover:bg-gray-50 rounded-lg">
-                    <span>Conteo por Servicio</span>
-                    {{-- Icono chevron (rota cuando está abierto gracias a group-open) --}}
-                    <svg class="w-5 h-5 transition-transform duration-200 group-open:rotate-180" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 10 6" aria-hidden="true">
-                        <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5 5 1 1 5"/>
-                    </svg>
-                </summary>
+        {{-- =========================== LEYENDA SEMÁFORO =========================== --}}
+        <div class="mb-3 text-xs flex items-center gap-4">
+        <span class="inline-flex items-center gap-2">
+            <span class="inline-block h-2.5 w-2.5 rounded-full bg-green-500"></span> COMPLETO
+        </span>
+            <span class="inline-flex items-center gap-2">
+            <span class="inline-block h-2.5 w-2.5 rounded-full bg-yellow-400"></span> VACANTE
+        </span>
+            <span class="inline-flex items-center gap-2">
+            <span class="inline-block h-2.5 w-2.5 rounded-full bg-red-500"></span> EXCEDIDO
+        </span>
+        </div>
 
-                <div class="p-4 pt-0">
-                    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                        @foreach($conteoServicios as $svc)
-                            <div class="bg-white border border-gray-200 rounded-2xl shadow p-4">
-                                <div class="text-xs uppercase tracking-wide text-gray-500">Servicio</div>
-                                <div class="mt-1 text-sm font-semibold text-gray-900">
-                                    {{ $svc->servicio_organico ?: 'Sin servicio' }}
-                                </div>
-                                <div class="mt-3 text-3xl font-extrabold">{{ number_format($svc->total) }}</div>
-                            </div>
-                        @endforeach
-                    </div>
-                </div>
-            </details>
-        @endif
+        {{-- =========================== TABLA RESULTADOS =========================== --}}
+        <div class="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+            <div class="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+                <h3 class="text-sm font-semibold">Resultados</h3>
+            </div>
 
+            <div class="overflow-x-auto">
+                <table class="min-w-full text-xs">
+                    <thead class="bg-gray-100 dark:bg-gray-900/30">
+                    <tr class="text-left">
+                        <th class="px-3 py-2 font-semibold">Servicio</th>
+                        <th class="px-3 py-2 font-semibold">Nomenclatura</th>
+                        <th class="px-3 py-2 font-semibold">Cargo</th>
+                        <th class="px-3 py-2 font-semibold">Grado(s)</th>
+                        <th class="px-3 py-2 font-semibold text-right">Orgánico aprobado</th>
+                        <th class="px-3 py-2 font-semibold text-right">Orgánico efectivo</th>
+                        <th class="px-3 py-2 font-semibold text-center">Alertas</th>
+                        <th class="px-3 py-2 font-semibold">Acciones</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    @forelse($datos as $fila)
+                        @php
+                            $noCumplen = (int)($fila->no_cumplen_grado ?? 0);
+                            $aprobado  = (int)($fila->organico_aprobado ?? 0);
+                            $efectivo  = (int)($fila->organico_efectivo ?? 0);
 
-        {{-- CARDS TOTALES (Aprobado / Efectivo / Nivel Adscrito) --}}
-        @php
-            $aprobadoTotal = isset($totales) ? (int)($totales->total_aprobado ?? 0) : 0;
-            $efectivoTotal = isset($totales) ? (int)($totales->total_efectivo ?? 0) : 0;
-            $nadsAprobado  = isset($nivelAdscrito) ? (int)($nivelAdscrito->total_aprobado ?? 0) : 0;
-            $nadsEfectivo  = isset($nivelAdscrito) ? (int)($nivelAdscrito->total_efectivo ?? 0) : 0;
-        @endphp
+                            if ($efectivo < $aprobado) { $estadoLabel = 'VACANTE';  $dotClass = 'bg-yellow-400'; }
+                            elseif ($efectivo == $aprobado) { $estadoLabel = 'COMPLETO'; $dotClass = 'bg-green-500'; }
+                            else { $estadoLabel = 'EXCEDIDO'; $dotClass = 'bg-red-500'; }
+                        @endphp
+                        <tr class="border-t border-gray-200 dark:border-gray-700">
+                            <td class="px-3 py-2">{{ $fila->servicio_organico }}</td>
+                            <td class="px-3 py-2">{{ $fila->nomenclatura_organico }}</td>
+                            <td class="px-3 py-2">{{ $fila->cargo_organico }}</td>
+                            <td class="px-3 py-2">{{ $fila->grado_organico }}</td>
 
-            <!-- Botón abre modal -->
-        <button
-            type="button"
-            id="btn-open-cards"
-            class="mb-4 bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded">
-            Ver resumen (tabla)
-        </button>
+                            <td class="px-3 py-2 text-right">{{ $aprobado }}</td>
 
-        <!-- ... aquí sigue tu tabla de $datos ... -->
+                            <td class="px-3 py-2 text-right">
+                                <span class="inline-flex items-center gap-2 justify-end">
+                                    <span>{{ $efectivo }}</span>
+                                    <span class="inline-block h-2.5 w-2.5 rounded-full {{ $dotClass }}"
+                                          title="{{ $estadoLabel }}"></span>
+                                </span>
+                            </td>
 
-        <!-- ... aquí sigue la paginación ... -->
+                            <td class="px-3 py-2 text-center">
+                                @if($noCumplen > 0)
+                                    <svg xmlns="http://www.w3.org/2000/svg"
+                                         class="h-4 w-4 inline-block text-red-600 dark:text-red-400"
+                                         viewBox="0 0 20 20" fill="currentColor"
+                                         title="Hay {{ $noCumplen }} ocupante(s) que no cumplen el grado orgánico">
+                                        <path fill-rule="evenodd"
+                                              d="M8.257 3.099c.765-1.36 2.721-1.36 3.486 0l6.518 11.588c.75 1.334-.213 2.993-1.743 2.993H3.482c-1.53 0-2.493-1.659-1.743-2.993L8.257 3.1zM11 14a1 1 0 10-2 0 1 1 0 002 0zm-1-2a1 1 0 01-1-1V8a1 1 0 011-1z"
+                                              clip-rule="evenodd" />
+                                    </svg>
+                                @endif
+                            </td>
 
-        <!-- Modal con tabla de 3 columnas -->
-        <div id="cards-modal-backdrop"
-             class="fixed inset-0 bg-black/50 z-40 hidden"></div>
+                            <td class="px-3 py-2">
+                                <form method="GET" action="{{ route('reporte_organico.ocupantes') }}">
+                                    <input type="hidden" name="nomenclatura" value="{{ $fila->nomenclatura_organico }}">
+                                    <input type="hidden" name="cargo"        value="{{ $fila->cargo_organico }}">
+                                    <button type="submit"
+                                            class="inline-flex items-center px-2 py-1.5 text-xs rounded-md
+                                                   bg-indigo-600 text-white hover:bg-indigo-700">
+                                        Ver ocupantes
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="8" class="px-3 py-3 text-center text-gray-500 dark:text-white">
+                                No hay resultados con los filtros aplicados.
+                            </td>
+                        </tr>
+                    @endforelse
+                    </tbody>
+                </table>
+            </div>
 
-        <div id="cards-modal"
-             class="fixed inset-0 z-50 hidden flex items-center justify-center p-4"
-             role="dialog" aria-modal="true" aria-labelledby="cards-modal-title">
-            <div class="w-full max-w-4xl bg-white rounded-2xl shadow-xl overflow-hidden">
-                <div class="flex items-center justify-between px-6 py-4 border-b">
-                    <h3 id="cards-modal-title" class="text-lg font-semibold text-gray-800">
-                        Resumen (según filtros actuales)
-                    </h3>
-                    <button type="button" id="btn-close-cards"
-                            class="text-gray-500 hover:text-gray-700 p-2 rounded">
-                        ✕
-                    </button>
-                </div>
+            <div class="px-4 py-3 border-t border-gray-200 dark:border-gray-700">
+                {{ $datos->links() }}
+            </div>
+        </div>
 
-                <!-- Aquí pegas la tabla de 3 columnas que te pasé -->
-                <div class="px-6 py-6">
-                    @php
-                        // Totales globales (ya los tenías)
-                        $aprobadoTotal = isset($totales) ? (int)($totales->total_aprobado ?? 0) : 0;
-                        $efectivoTotal = isset($totales) ? (int)($totales->total_efectivo ?? 0) : 0;
+    </div>
 
-                        // Conteos por estado_efectivo (asegúrate de pasar $estadoEfectivo desde el controlador)
-                        $tt = ($estadoEfectivo['TRASLADO TEMPORAL'] ?? 0) + ($estadoEfectivo['TRASLADO TEMPORAL POR EXCEDENTE'] ?? 0);
-                        $te = isset($estadoEfectivo) ? (int)($estadoEfectivo['TRASLADO EVENTUAL'] ?? 0) : 0;
-                        $uo = isset($estadoEfectivo) ? (int)($estadoEfectivo['UNIDAD DE ORIGEN']  ?? 0) : 0;
+    {{-- =========================== MODAL RESUMEN POR SUBSISTEMA =========================== --}}
+    <div id="modal-subsistema" class="fixed inset-0 z-50 hidden items-center justify-center">
+        <div class="absolute inset-0 bg-black/60" onclick="toggleModal('modal-subsistema')"></div>
 
-                        // Otros niveles (si ya los pasaste)
-                        $asesorAp  = isset($nivelAsesor)? (int)($nivelAsesor->total_aprobado ?? 0) : 0;
-                        $asesorEf  = isset($nivelAsesor)? (int)($nivelAsesor->total_efectivo ?? 0) : 0;
+        <div class="relative z-10 w-[95vw] max-w-6xl max-h-[85vh] overflow-hidden rounded-xl
+                bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 shadow-xl">
+            <div class="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+                <h3 class="text-sm font-semibold">Resumen por subsistema (con filtros aplicados)</h3>
+                <button type="button" class="p-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800"
+                        onclick="toggleModal('modal-subsistema')" aria-label="Cerrar">✕</button>
+            </div>
 
-                        $apoyoAp   = isset($nivelApoyo)? (int)($nivelApoyo->total_aprobado ?? 0) : 0;
-                        $apoyoEf   = isset($nivelApoyo)? (int)($nivelApoyo->total_efectivo ?? 0) : 0;
-
-                        $coordAp   = isset($nivelCoordinacion)? (int)($nivelCoordinacion->total_aprobado ?? 0) : 0;
-                        $coordEf   = isset($nivelCoordinacion)? (int)($nivelCoordinacion->total_efectivo ?? 0) : 0;
-
-                        $desconcAp = isset($nivelDesconcentrado)? (int)($nivelDesconcentrado->total_aprobado ?? 0) : 0;
-                        $desconcEf = isset($nivelDesconcentrado)? (int)($nivelDesconcentrado->total_efectivo ?? 0) : 0;
-
-                        $ndescZonalAp = isset($ndescZonal)? (int)($ndescZonal->total_aprobado ?? 0) : 0;
-                        $ndescZonalEf = isset($ndescZonal)? (int)($ndescZonal->total_efectivo ?? 0) : 0;
-
-                        $ndescSubAp = isset($ndescSubzonal)? (int)($ndescSubzonal->total_aprobado ?? 0) : 0;
-                        $ndescSubEf = isset($ndescSubzonal)? (int)($ndescSubzonal->total_efectivo ?? 0) : 0;
-
-                        $ndescDcsAp = isset($ndescDCS)? (int)($ndescDCS->total_aprobado ?? 0) : 0;
-                        $ndescDcsEf = isset($ndescDCS)? (int)($ndescDCS->total_efectivo ?? 0) : 0;
-
-                        $jefPrevAp = isset($jefPrev)? (int)($jefPrev->total_aprobado ?? 0) : 0;
-                        $jefPrevEf = isset($jefPrev)? (int)($jefPrev->total_efectivo ?? 0) : 0;
-
-                        $jefInvAp = isset($jefInv)? (int)($jefInv->total_aprobado ?? 0) : 0;
-                        $jefInvEf = isset($jefInv)? (int)($jefInv->total_efectivo ?? 0) : 0;
-
-                        $jefIntAp = isset($jefInt)? (int)($jefInt->total_aprobado ?? 0) : 0;
-                        $jefIntEf = isset($jefInt)? (int)($jefInt->total_efectivo ?? 0) : 0;
-
-                        $directAp  = isset($nivelDirectivo)? (int)($nivelDirectivo->total_aprobado ?? 0) : 0;
-                        $directEf  = isset($nivelDirectivo)? (int)($nivelDirectivo->total_efectivo ?? 0) : 0;
-
-                        $operaAp   = isset($nivelOperativo)? (int)($nivelOperativo->total_aprobado ?? 0) : 0;
-                        $operaEf   = isset($nivelOperativo)? (int)($nivelOperativo->total_efectivo ?? 0) : 0;
-                    @endphp
-
-                    <div class="overflow-x-auto">
-                        <table class="min-w-full border text-sm text-gray-800">
-                            <thead class="bg-gray-100 font-semibold uppercase text-xs">
-                            <tr>
-                                <th class="px-4 py-2 border">Nivel</th>
-                                <th class="px-4 py-2 border text-center">Aprobado</th>
-                                <th class="px-4 py-2 border text-center">Efectivo</th>
-                                <th class="px-4 py-2 border text-center">Traslado Temporal</th>
-                                <th class="px-4 py-2 border text-center">Traslado Eventual</th>
-                                <th class="px-4 py-2 border text-center">Unidad de Origen</th>
+            <div class="p-4 overflow-auto">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
+                    <div class="md:col-span-2">
+                        <table class="min-w-full text-xs">
+                            <thead class="bg-gray-100 dark:bg-gray-800/60">
+                            <tr class="text-left">
+                                <th class="px-3 py-2 font-semibold">Subsistema</th>
+                                <th class="px-3 py-2 font-semibold text-right">Aprobado</th>
+                                <th class="px-3 py-2 font-semibold text-right">Efectivo</th>
+                                <th class="px-3 py-2 font-semibold text-right">Vacantes</th>
+                                <th class="px-3 py-2 font-semibold text-right">Completos</th>
+                                <th class="px-3 py-2 font-semibold text-right">Excedidos</th>
+                                <th class="px-3 py-2 font-semibold text-right">Diferencia (Ef − Ap)</th>
                             </tr>
                             </thead>
                             <tbody>
-                            {{-- Totales --}}
-                            <tr>
-                                <td class="px-4 py-2 border font-medium">Orgánico Aprobado (Total)</td>
-                                <td class="px-4 py-2 border text-center">{{ number_format($aprobadoTotal) }}</td>
-                                <td class="px-4 py-2 border text-center">—</td>
-                                <td class="px-4 py-2 border text-center">—</td>
-                                <td class="px-4 py-2 border text-center">—</td>
-                                <td class="px-4 py-2 border text-center">—</td>
-                            </tr>
-                            <tr>
-                                <td class="px-4 py-2 border font-medium">Orgánico Efectivo (Total)</td>
-                                <td class="px-4 py-2 border text-center">—</td>
-                                <td class="px-4 py-2 border text-center">{{ number_format($efectivoTotal) }}</td>
-                                <td class="px-4 py-2 border text-center">{{ number_format($tt) }}</td>
-                                <td class="px-4 py-2 border text-center">{{ number_format($te) }}</td>
-                                <td class="px-4 py-2 border text-center">{{ number_format($uo) }}</td>
-                            </tr>
-
-                            {{-- Niveles principales --}}
-                            <tr>
-                                <td class="px-4 py-2 border font-medium">Nivel Asesor (NAS)</td>
-                                <td class="px-4 py-2 border text-center">{{ number_format($asesorAp) }}</td>
-                                <td class="px-4 py-2 border text-center">{{ number_format($asesorEf) }}</td>
-                                <td class="px-4 py-2 border text-center">—</td>
-                                <td class="px-4 py-2 border text-center">—</td>
-                                <td class="px-4 py-2 border text-center">—</td>
-                            </tr>
-                            <tr>
-                                <td class="px-4 py-2 border font-medium">Nivel de Apoyo (NAP)</td>
-                                <td class="px-4 py-2 border text-center">{{ number_format($apoyoAp) }}</td>
-                                <td class="px-4 py-2 border text-center">{{ number_format($apoyoEf) }}</td>
-                                <td class="px-4 py-2 border text-center">—</td>
-                                <td class="px-4 py-2 border text-center">—</td>
-                                <td class="px-4 py-2 border text-center">—</td>
-                            </tr>
-                            <tr>
-                                <td class="px-4 py-2 border font-medium">Nivel de Coordinación (NCOORD)</td>
-                                <td class="px-4 py-2 border text-center">{{ number_format($coordAp) }}</td>
-                                <td class="px-4 py-2 border text-center">{{ number_format($coordEf) }}</td>
-                                <td class="px-4 py-2 border text-center">—</td>
-                                <td class="px-4 py-2 border text-center">—</td>
-                                <td class="px-4 py-2 border text-center">—</td>
-                            </tr>
-
-                            {{-- NDESC (Total + subdivisiones) --}}
-                            <tr class="bg-orange-50">
-                                <td class="px-4 py-2 border font-semibold text-orange-800">Nivel Desconcentrado (NDESC) — Total</td>
-                                <td class="px-4 py-2 border text-center font-semibold text-orange-800">{{ number_format($desconcAp) }}</td>
-                                <td class="px-4 py-2 border text-center font-semibold text-orange-800">{{ number_format($desconcEf) }}</td>
-                                <td class="px-4 py-2 border text-center">—</td>
-                                <td class="px-4 py-2 border text-center">—</td>
-                                <td class="px-4 py-2 border text-center">—</td>
-                            </tr>
-                            <tr>
-                                <td class="px-4 py-2 border pl-8">ZONAL (Servicio contiene “PREV-ZONAL”)</td>
-                                <td class="px-4 py-2 border text-center">{{ number_format($ndescZonalAp) }}</td>
-                                <td class="px-4 py-2 border text-center">{{ number_format($ndescZonalEf) }}</td>
-                                <td class="px-4 py-2 border text-center">—</td>
-                                <td class="px-4 py-2 border text-center">—</td>
-                                <td class="px-4 py-2 border text-center">—</td>
-                            </tr>
-                            <tr>
-                                <td class="px-4 py-2 border pl-8">SUBZONAL (Servicio contiene “PREV-SZ”)</td>
-                                <td class="px-4 py-2 border text-center">{{ number_format($ndescSubAp) }}</td>
-                                <td class="px-4 py-2 border text-center">{{ number_format($ndescSubEf) }}</td>
-                                <td class="px-4 py-2 border text-center">—</td>
-                                <td class="px-4 py-2 border text-center">—</td>
-                                <td class="px-4 py-2 border text-center">—</td>
-                            </tr>
-                            <tr>
-                                <td class="px-4 py-2 border pl-8">DISTRITO – CIRCUITO – SUBCIRCUITO (Servicio “PREV-D-C-S”)</td>
-                                <td class="px-4 py-2 border text-center">{{ number_format($ndescDcsAp) }}</td>
-                                <td class="px-4 py-2 border text-center">{{ number_format($ndescDcsEf) }}</td>
-                                <td class="px-4 py-2 border text-center">—</td>
-                                <td class="px-4 py-2 border text-center">—</td>
-                                <td class="px-4 py-2 border text-center">—</td>
-                            </tr>
-
-                            {{-- Jefaturas por NOMENCLATURA --}}
-                            <tr class="bg-sky-50">
-                                <td class="px-4 py-2 border font-semibold text-sky-800">Jefatura Preventiva (JPREV)</td>
-                                <td class="px-4 py-2 border text-center">{{ number_format($jefPrevAp) }}</td>
-                                <td class="px-4 py-2 border text-center">{{ number_format($jefPrevEf) }}</td>
-                                <td class="px-4 py-2 border text-center">—</td>
-                                <td class="px-4 py-2 border text-center">—</td>
-                                <td class="px-4 py-2 border text-center">—</td>
-                            </tr>
-                            <tr class="bg-sky-50">
-                                <td class="px-4 py-2 border font-semibold text-sky-800">Jefatura de Investigación (JINV)</td>
-                                <td class="px-4 py-2 border text-center">{{ number_format($jefInvAp) }}</td>
-                                <td class="px-4 py-2 border text-center">{{ number_format($jefInvEf) }}</td>
-                                <td class="px-4 py-2 border text-center">—</td>
-                                <td class="px-4 py-2 border text-center">—</td>
-                                <td class="px-4 py-2 border text-center">—</td>
-                            </tr>
-                            <tr class="bg-sky-50">
-                                <td class="px-4 py-2 border font-semibold text-sky-800">Jefatura de Inteligencia (JINT)</td>
-                                <td class="px-4 py-2 border text-center">{{ number_format($jefIntAp) }}</td>
-                                <td class="px-4 py-2 border text-center">{{ number_format($jefIntEf) }}</td>
-                                <td class="px-4 py-2 border text-center">—</td>
-                                <td class="px-4 py-2 border text-center">—</td>
-                                <td class="px-4 py-2 border text-center">—</td>
-                            </tr>
-
-                            {{-- Otros niveles --}}
-                            <tr>
-                                <td class="px-4 py-2 border font-medium">Nivel Directivo (NDIREC)</td>
-                                <td class="px-4 py-2 border text-center">{{ number_format($directAp) }}</td>
-                                <td class="px-4 py-2 border text-center">{{ number_format($directEf) }}</td>
-                                <td class="px-4 py-2 border text-center">—</td>
-                                <td class="px-4 py-2 border text-center">—</td>
-                                <td class="px-4 py-2 border text-center">—</td>
-                            </tr>
-                            <tr>
-                                <td class="px-4 py-2 border font-medium">Nivel Operativo (NOPERA)</td>
-                                <td class="px-4 py-2 border text-center">{{ number_format($operaAp) }}</td>
-                                <td class="px-4 py-2 border text-center">{{ number_format($operaEf) }}</td>
-                                <td class="px-4 py-2 border text-center">—</td>
-                                <td class="px-4 py-2 border text-center">—</td>
-                                <td class="px-4 py-2 border text-center">—</td>
-                            </tr>
+                            @php $totAp=$totEf=$totVac=$totCom=$totExc=$totDif=0; @endphp
+                            @forelse($statsSubsistema as $s)
+                                @php
+                                    $totAp += (int)$s->total_aprobado; $totEf += (int)$s->total_efectivo;
+                                    $totVac += (int)$s->cargos_vacantes; $totCom += (int)$s->cargos_completos;
+                                    $totExc += (int)$s->cargos_excedidos; $totDif += (int)$s->diferencia_total;
+                                @endphp
+                                <tr class="border-t border-gray-200 dark:border-gray-700">
+                                    <td class="px-3 py-2">{{ $s->subsistema ?? 'SIN SUBSISTEMA' }}</td>
+                                    <td class="px-3 py-2 text-right">{{ $s->total_aprobado }}</td>
+                                    <td class="px-3 py-2 text-right">{{ $s->total_efectivo }}</td>
+                                    <td class="px-3 py-2 text-right">{{ $s->cargos_vacantes }}</td>
+                                    <td class="px-3 py-2 text-right">{{ $s->cargos_completos }}</td>
+                                    <td class="px-3 py-2 text-right">{{ $s->cargos_excedidos }}</td>
+                                    <td class="px-3 py-2 text-right">{{ $s->diferencia_total }}</td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="7" class="px-3 py-3 text-center text-gray-500 dark:text-gray-300">Sin datos.</td>
+                                </tr>
+                            @endforelse
                             </tbody>
+                            @if(count($statsSubsistema))
+                                <tfoot class="bg-gray-50 dark:bg-gray-800/50">
+                                <tr class="font-semibold border-t border-gray-200 dark:border-gray-700">
+                                    <td class="px-3 py-2">Totales</td>
+                                    <td class="px-3 py-2 text-right">{{ $totAp }}</td>
+                                    <td class="px-3 py-2 text-right">{{ $totEf }}</td>
+                                    <td class="px-3 py-2 text-right">{{ $totVac }}</td>
+                                    <td class="px-3 py-2 text-right">{{ $totCom }}</td>
+                                    <td class="px-3 py-2 text-right">{{ $totExc }}</td>
+                                    <td class="px-3 py-2 text-right">{{ $totDif }}</td>
+                                </tr>
+                                </tfoot>
+                            @endif
                         </table>
                     </div>
 
-                    {{-- Form oculto para exportar en Excel con filtros vigentes --}}
-                    <form id="form-export-resumen-xlsx" action="{{ route('reporte_organico.exportar_resumen_xlsx') }}" method="GET" class="hidden">
-                        <input type="hidden" name="servicio"     value="{{ request('servicio') }}">
-                        <input type="hidden" name="nomenclatura" value="{{ request('nomenclatura') }}">
-                        <input type="hidden" name="cargo"        value="{{ request('cargo') }}">
-                        <input type="hidden" name="estado"       value="{{ request('estado') }}">
-                    </form>
-
-                    <div class="px-6 py-4 border-t flex gap-2 justify-end">
-                        <button type="button" id="btn-close-cards-2"
-                                class="bg-gray-100 hover:bg-gray-200 text-gray-800 px-4 py-2 rounded">
-                            Cerrar
-                        </button>
-                        <button type="button"
-                                onclick="document.getElementById('form-export-resumen-xlsx').submit()"
-                                class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded">
-                            Descargar Excel
-                        </button>
+                    <div class="md:col-span-1">
+                        <div class="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-3">
+                            <div class="mb-2 flex items-center justify-between">
+                                <h4 class="text-xs font-semibold">Gráfico por subsistema</h4>
+                                <select id="metric-select"
+                                        class="rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-[11px] px-1.5 py-1">
+                                    <option value="total_efectivo" selected>Efectivo</option>
+                                    <option value="total_aprobado">Aprobado</option>
+                                    <option value="cargos_vacantes">Vacantes</option>
+                                    <option value="cargos_completos">Completos</option>
+                                    <option value="cargos_excedidos">Excedidos</option>
+                                </select>
+                            </div>
+                            <div class="relative">
+                                <canvas id="subsistemaPie" height="180"></canvas>
+                                <p id="subsistemaPieEmpty" class="mt-2 text-xs text-gray-500 dark:text-gray-400 hidden">No hay datos para graficar.</p>
+                            </div>
+                        </div>
+                        <p class="mt-2 text-[11px] text-gray-500 dark:text-gray-400">Tip: cambia la métrica para ver la distribución.</p>
                     </div>
-
-
                 </div>
+            </div>
 
-
+            <div class="flex justify-end gap-2 px-4 py-3 border-t border-gray-200 dark:border-gray-700">
+                <button type="button" onclick="toggleModal('modal-subsistema')"
+                        class="inline-flex items-center px-3 py-2 text-sm rounded-md
+                           bg-gray-100 hover:bg-gray-200 text-gray-900
+                           dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-white">
+                    Cerrar
+                </button>
             </div>
         </div>
-
-        <!-- Script abrir/cerrar modal -->
-        <script>
-            (function () {
-                const openBtn   = document.getElementById('btn-open-cards');
-                const closeBtn  = document.getElementById('btn-close-cards');
-                const closeBtn2 = document.getElementById('btn-close-cards-2');
-                const modal     = document.getElementById('cards-modal');
-                const backdrop  = document.getElementById('cards-modal-backdrop');
-
-                function openModal() {
-                    modal.classList.remove('hidden');
-                    backdrop.classList.remove('hidden');
-                    document.body.classList.add('overflow-hidden');
-                }
-                function closeModal() {
-                    modal.classList.add('hidden');
-                    backdrop.classList.add('hidden');
-                    document.body.classList.remove('overflow-hidden');
-                }
-
-                if (openBtn)  openBtn.addEventListener('click', openModal);
-                if (closeBtn) closeBtn.addEventListener('click', closeModal);
-                if (closeBtn2) closeBtn2.addEventListener('click', closeModal);
-                if (backdrop) backdrop.addEventListener('click', closeModal);
-            })();
-        </script>
-
-        {{-- Tabla (estructura basada en tu vista anterior) --}}
-        <div class="overflow-x-auto">
-            <table class="min-w-full bg-white border text-sm">
-                <thead class="bg-gray-100 text-xs font-semibold text-gray-700 uppercase">
-                <tr>
-                    <th class="px-4 py-2">Servicio</th>
-                    <th class="px-4 py-2">Nomenclatura</th>
-                    <th class="px-4 py-2">Cargo</th>
-                    <th class="px-4 py-2">Orgánico Aprobado</th>
-                    <th class="px-4 py-2">Orgánico Efectivo</th>
-                    <th class="px-4 py-2">Ver Ocupantes</th>
-                </tr>
-                </thead>
-                <tbody>
-                @forelse ($datos as $item)
-                    @php
-                        $efectivo = $item->organico_efectivo;
-                        $aprobado = $item->organico_aprobado;
-                        $estado = '';
-
-                        if ($efectivo == $aprobado)      $estado = 'COMPLETO';
-                        elseif ($efectivo > $aprobado)    $estado = 'EXCEDIDO';
-                        else                               $estado = 'VACANTE';
-
-                        $color = match(true) {
-                            $estado === 'COMPLETO' => 'bg-green-500',
-                            $estado === 'EXCEDIDO' => 'bg-red-500',
-                            $estado === 'VACANTE'  => 'bg-yellow-400',
-                            default                => 'bg-gray-400'
-                        };
-                    @endphp
-                    <tr class="border-t">
-                        <td class="px-4 py-2">{{ $item->servicio_organico }}</td>
-                        <td class="px-4 py-2">{{ $item->nomenclatura_organico }}</td>
-                        <td class="px-4 py-2">{{ $item->cargo_organico }}</td>
-                        <td class="px-4 py-2">{{ $aprobado }}</td>
-                        <td class="px-4 py-2">
-                            <span class="inline-flex items-center justify-center px-2 py-1 text-xs font-bold text-white rounded-full {{ $color }}">
-                                {{ $efectivo }}
-                            </span>
-                        </td>
-                        <td class="px-4 py-2">
-                            <form action="{{ route('reporte_organico.ocupantes') }}" method="GET">
-                                <input type="hidden" name="nomenclatura" value="{{ $item->nomenclatura_organico }}">
-                                <input type="hidden" name="cargo"        value="{{ $item->cargo_organico }}">
-                                <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-3 py-1 rounded">
-                                    Ver Ocupantes
-                                </button>
-                            </form>
-                        </td>
-                    </tr>
-                @empty
-                    <tr>
-                        <td colspan="6" class="text-center text-gray-500 py-4">No se encontraron resultados.</td>
-                    </tr>
-                @endforelse
-                </tbody>
-            </table>
-        </div>
-
-        {{-- Paginación --}}
-        <div class="mt-4">
-            {{ $datos->appends(request()->query())->links() }}
-        </div>
     </div>
+
+    {{-- ===== Helpers Modal ===== --}}
+    <script>
+        function toggleModal(id) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            el.classList.toggle('hidden');
+            el.classList.toggle('flex');
+        }
+        function openSubsistemaModal() {
+            toggleModal('modal-subsistema');
+            setTimeout(() => {
+                const sel = document.getElementById('metric-select');
+                const metric = sel?.value || 'total_efectivo';
+                window.renderSubsistemaPie?.(metric);
+            }, 60);
+        }
+    </script>
+
+    {{-- ===== Dropdowns con checkboxes + buscador (JS nativo) ===== --}}
+    <script>
+        (function(){
+            const DROPDOWN_SELECTOR = '[data-dd]';
+            const openClassList = new Set();
+
+            function closeAll(except=null){
+                document.querySelectorAll(DROPDOWN_SELECTOR).forEach(dd=>{
+                    if (dd===except) return;
+                    const panel = dd.querySelector('[data-dd-panel]');
+                    const btn   = dd.querySelector('[data-dd-btn]');
+                    panel?.classList.add('hidden');
+                    btn?.setAttribute('aria-expanded','false');
+                    openClassList.delete(dd);
+                });
+            }
+
+            function initDropdown(dd){
+                const btn    = dd.querySelector('[data-dd-btn]');
+                const panel  = dd.querySelector('[data-dd-panel]');
+                const search = dd.querySelector('[data-dd-search]');
+                const list   = dd.querySelector('[data-dd-list]');
+                const count  = dd.querySelector('[data-dd-count]');
+                const label  = dd.querySelector('[data-dd-label]');
+                const selAll = dd.querySelector('[data-dd-select-all]');
+                const clear  = dd.querySelector('[data-dd-clear]');
+
+                if(!btn || !panel || !list) return;
+
+                // toggle
+                btn.addEventListener('click', ()=>{
+                    const hidden = panel.classList.contains('hidden');
+                    closeAll(dd);
+                    panel.classList.toggle('hidden', !hidden);
+                    btn.setAttribute('aria-expanded', hidden?'true':'false');
+                    if(hidden){ openClassList.add(dd); search?.focus(); } else { openClassList.delete(dd); }
+                });
+
+                // outside click
+                document.addEventListener('click', (e)=>{
+                    if(!dd.contains(e.target)) {
+                        panel.classList.add('hidden');
+                        btn.setAttribute('aria-expanded','false');
+                        openClassList.delete(dd);
+                    }
+                });
+
+                // Esc / Enter to close
+                dd.addEventListener('keydown', (e)=>{
+                    if(e.key === 'Escape' || e.key === 'Enter'){
+                        panel.classList.add('hidden');
+                        btn.setAttribute('aria-expanded','false');
+                        openClassList.delete(dd);
+                        btn.focus();
+                    }
+                });
+
+                // search filter
+                search?.addEventListener('input', ()=>{
+                    const q = (search.value || '').toLowerCase();
+                    list.querySelectorAll('label').forEach(row=>{
+                        const txt = (row.textContent || '').toLowerCase();
+                        row.classList.toggle('hidden', !txt.includes(q));
+                    });
+                });
+
+                // select all
+                selAll?.addEventListener('click', ()=>{
+                    list.querySelectorAll('input[type="checkbox"]:not(:checked):not(.hidden input)').forEach(chk=>{
+                        if (!chk.closest('label')?.classList.contains('hidden')) chk.checked = true;
+                    });
+                    updateCount();
+                });
+
+                // clear
+                clear?.addEventListener('click', ()=>{
+                    list.querySelectorAll('input[type="checkbox"]:checked').forEach(chk=> chk.checked = false);
+                    updateCount();
+                });
+
+                // change counter on any checkbox change
+                list.addEventListener('change', updateCount);
+
+                function updateCount(){
+                    const n = list.querySelectorAll('input[type="checkbox"]:checked').length;
+                    if(count){
+                        count.textContent = n;
+                        count.classList.toggle('hidden', n===0);
+                    }
+                    if(label){
+                        const base = label.getAttribute('data-base') || label.textContent || 'Selecciona...';
+                        // mantenemos el texto base, solo mostramos contador
+                        label.setAttribute('data-base', base);
+                    }
+                }
+
+                updateCount();
+            }
+
+            document.querySelectorAll(DROPDOWN_SELECTOR).forEach(initDropdown);
+
+            // cerrar con Esc si cualquier dropdown está abierto
+            document.addEventListener('keydown', (e)=>{
+                if(e.key === 'Escape' && openClassList.size){
+                    closeAll();
+                }
+            });
+        })();
+    </script>
+
+    {{-- ===== Chart.js & gráfico ===== --}}
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+    <script>
+        (function () {
+            const raw = @json($statsSubsistema ?? []);
+            const data = raw.map(r => ({
+                subsistema: r.subsistema ?? 'SIN SUBSISTEMA',
+                total_aprobado: Number(r.total_aprobado ?? 0),
+                total_efectivo: Number(r.total_efectivo ?? 0),
+                cargos_vacantes: Number(r.cargos_vacantes ?? 0),
+                cargos_completos: Number(r.cargos_completos ?? 0),
+                cargos_excedidos: Number(r.cargos_excedidos ?? 0),
+                diferencia_total: Number(r.diferencia_total ?? 0),
+            }));
+
+            let subsistemaPieChart = null;
+            function currentTextColor() {
+                const isDark = document.documentElement.classList.contains('dark');
+                return isDark ? '#e5e7eb' : '#374151';
+            }
+            function genColors(n) {
+                const arr = [];
+                for (let i = 0; i < n; i++) {
+                    const hue = Math.round((360 / Math.max(1, n)) * i);
+                    arr.push(`hsl(${hue} 70% 55%)`);
+                }
+                return arr;
+            }
+            function buildDataset(metricKey) {
+                const labels = data.map(d => d.subsistema);
+                const values = data.map(d => d[metricKey] ?? 0);
+                const total = values.reduce((a,b) => a + b, 0);
+                const hasData = total > 0;
+                return { labels, values, hasData };
+            }
+            function titleForMetric(metricKey) {
+                switch (metricKey) {
+                    case 'total_aprobado': return 'Aprobado';
+                    case 'total_efectivo': return 'Efectivo';
+                    case 'cargos_vacantes': return 'Vacantes';
+                    case 'cargos_completos': return 'Completos';
+                    case 'cargos_excedidos': return 'Excedidos';
+                    default: return 'Distribución';
+                }
+            }
+            window.renderSubsistemaPie = function(metricKey = 'total_efectivo') {
+                const { labels, values, hasData } = buildDataset(metricKey);
+                const canvas = document.getElementById('subsistemaPie');
+                const empty  = document.getElementById('subsistemaPieEmpty');
+                if (!canvas) return;
+
+                if (!hasData) {
+                    canvas.classList.add('hidden'); empty?.classList.remove('hidden');
+                    if (subsistemaPieChart) { subsistemaPieChart.destroy(); subsistemaPieChart = null; }
+                    return;
+                } else {
+                    canvas.classList.remove('hidden'); empty?.classList.add('hidden');
+                }
+
+                const ctx = canvas.getContext('2d');
+                const colors = genColors(labels.length);
+                const labelColor = currentTextColor();
+
+                if (subsistemaPieChart) subsistemaPieChart.destroy();
+
+                subsistemaPieChart = new Chart(ctx, {
+                    type: 'pie',
+                    data: { labels, datasets: [{ data: values, backgroundColor: colors, borderColor: 'transparent' }] },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: { position: 'bottom', labels: { color: labelColor, boxWidth: 12, font: { size: 10 } } },
+                            tooltip: { callbacks: {
+                                    label: (ctx) => {
+                                        const total = ctx.dataset.data.reduce((a,b)=>a+b,0) || 1;
+                                        const val = Number(ctx.raw) || 0;
+                                        const pct = (val * 100 / total).toFixed(1);
+                                        return ` ${ctx.label}: ${val} (${pct}%)`;
+                                    }
+                                }},
+                            title: { display: true, text: `Distribución — ${titleForMetric(metricKey)}`, color: labelColor, font: { size: 12, weight: '600' } }
+                        }
+                    }
+                });
+            };
+            document.getElementById('metric-select')?.addEventListener('change', (e) => {
+                window.renderSubsistemaPie(e.target.value);
+            });
+        })();
+    </script>
 @endsection

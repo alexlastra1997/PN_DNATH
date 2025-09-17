@@ -21,6 +21,7 @@ return new class extends Migration
         $table->string('grado_organico')->nullable();
         $table->string('personal_organico')->nullable();
         $table->integer('numero_organico_ideal')->nullable();
+        $table->string('subsistema')->nullable();
         $table->timestamps();
     });
 }
