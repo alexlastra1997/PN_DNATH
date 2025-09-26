@@ -10,82 +10,86 @@ use Illuminate\Support\Facades\DB;
 
 class ImportExcelController extends Controller
 {
+    public function showForm()
+    {
+        return view('importar_excel');
+    }
+
     public function importar(Request $request)
     {
         $request->validate([
             'archivo' => 'required|mimes:xlsx,xls'
         ]);
 
-           // Ajuste para evitar errores de tiempo y memoria
-            ini_set('max_execution_time', 0); // sin límite de tiempo
-            ini_set('memory_limit', '-1');    // sin límite de memoria
+        // Evitar límites en archivos grandes
+        ini_set('max_execution_time', 0);
+        ini_set('memory_limit', '-1');
 
-        Excel::import(new UsuariosImport, $request->file('archivo'));
+        $import = new UsuariosImport();
+        Excel::import($import, $request->file('archivo'));
 
-        return back()->with('success', 'Datos importados correctamente.');
+        $resumen = $import->resumen();
+
+        return back()->with([
+            'success' => 'Datos importados correctamente.',
+            'resumen' => $resumen,
+        ]);
     }
 
-    public function showForm()
-{
-    return view('importar_excel'); // Asegúrate de tener una vista con ese nombre en resources/views
-}
+    public function eliminarTodos()
+    {
+        Usuario::truncate();
+        return redirect()->back()->with('delete', 'Todos los usuarios fueron eliminados correctamente.');
+    }
 
-public function eliminarTodos()
-{
-    
-    Usuario::truncate(); // Vacía toda la tabla 'usuarios'
+    // --- Opcionales, si ya los usas en tu app ---
 
-    return redirect()->back()->with('delete', 'Todos los usuarios fueron eliminados correctamente.');
-}
+    public function showContra()
+    {
+        return view('contra');
+    }
 
-public function showContra()
-{
-    return view('contra');
-}
+    public function importContra(Request $request)
+    {
+        $request->validate([
+            'file' => 'required|file|mimes:xlsx,xls',
+        ]);
 
-public function importContra(Request $request)
-{
-    $request->validate([
-        'file' => 'required|file|mimes:xlsx,xls',
-    ]);
+        $collection = Excel::toCollection(null, $request->file('file'))->first();
 
-    $collection = Excel::toCollection(null, $request->file('file'))->first();
+        $cedulas = $collection->pluck(0)->map(function ($cedula) {
+            return str_pad(trim($cedula), 10, '0', STR_PAD_LEFT);
+        })->toArray();
 
-    $cedulas = $collection->pluck(0)->map(function ($cedula) {
-        return str_pad(trim($cedula), 10, '0', STR_PAD_LEFT); // asegura 10 dígitos
-    })->toArray();
+        // ✅ SOLO actualiza si no hay texto en alerta_contra
+        foreach ($cedulas as $cedula) {
+            DB::table('usuarios')
+                ->where('cedula', $cedula)
+                ->whereNull('alerta_contra')
+                ->update(['alerta_contra' => '⚠️']);
+        }
 
-    // ✅ SOLO actualiza si no hay texto en alerta_contra
-    foreach ($cedulas as $cedula) {
+        $usuarios = DB::table('usuarios')
+            ->whereIn('cedula', $cedulas)
+            ->get();
+
+        return redirect()->route('contra.view')->with('usuarios', $usuarios);
+    }
+
+    public function guardarNovedad(Request $request)
+    {
+        $request->validate([
+            'cedulas' => 'required',
+            'novedad' => 'nullable|string|max:1000',
+        ]);
+
+        $cedulas = explode(',', $request->cedulas);
+        $novedad = $request->novedad;
+
         DB::table('usuarios')
-            ->where('cedula', $cedula)
-            ->whereNull('alerta_contra') // ← solo si está vacío
-            ->update(['alerta_contra' => '⚠️']);
+            ->whereIn('cedula', $cedulas)
+            ->update(['alerta_contra' => $novedad]);
+
+        return redirect()->route('contra.view')->with('success', '¡Novedad guardada con éxito!');
     }
-
-    // Obtiene los usuarios marcados
-    $usuarios = DB::table('usuarios')
-        ->whereIn('cedula', $cedulas)
-        ->get();
-
-    return redirect()->route('contra.view')->with('usuarios', $usuarios);
-}
-
-public function guardarNovedad(Request $request)
-{
-    $request->validate([
-        'cedulas' => 'required',
-         'novedad' => 'nullable|string|max:1000', // ← permite vacío
-    ]);
-
-    $cedulas = explode(',', $request->cedulas);
-    $novedad = $request->novedad;
-
-    DB::table('usuarios')
-        ->whereIn('cedula', $cedulas)
-        ->update(['alerta_contra' => $novedad]);
-
-    return redirect()->route('contra.view')->with('success', '¡Novedad guardada con éxito!');
-}
-
 }

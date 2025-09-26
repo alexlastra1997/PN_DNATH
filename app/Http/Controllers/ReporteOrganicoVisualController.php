@@ -5,189 +5,218 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\View;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Str;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\ReporteOrganicoExport;
 use App\Exports\ResumenOrganicoExport;
 
 class ReporteOrganicoVisualController extends Controller
 {
+    // Pon a false si quieres máxima velocidad (omite banderitas/alertas costosas).
+    private bool $computeAlerts = true;
+
     public function index(Request $request)
     {
-        // ====== BASE ======
-        $base = DB::table('reporte_organico as ro');
+        DB::connection()->disableQueryLog();
 
-        // ------------ Filtros múltiples (texto taggeable con LIKE OR) ------------
-        $servicios = array_values(array_filter((array) $request->input('servicio', []), fn($v) => trim($v) !== ''));
+        // ====== Subqueries base ======
+
+        // RO normalizado
+        $roQuery = DB::table('reporte_organico as ro')
+            ->selectRaw('ro.servicio_organico')
+            ->selectRaw('ro.nomenclatura_organico')
+            ->selectRaw('ro.cargo_organico')
+            ->selectRaw('ro.grado_organico')
+            ->selectRaw('ro.numero_organico_ideal')
+            ->selectRaw('ro.subsistema')
+            ->selectRaw('UPPER(TRIM(ro.nomenclatura_organico)) as ro_nom_norm')
+            ->selectRaw("CONCAT(SUBSTRING_INDEX(UPPER(TRIM(ro.nomenclatura_organico)),'-',5),'-') as ro_base_nom")
+            ->selectRaw('UPPER(TRIM(ro.cargo_organico)) as ro_cargo_norm');
+
+        // Usuarios: REGLA 1 (match exacto cargo + nomenclatura)
+        $uExactQuery = DB::table('usuarios as u')
+            ->selectRaw("UPPER(TRIM(u.funcion_efectiva)) as cargo_norm")
+            ->selectRaw("UPPER(TRIM(u.nomenclatura_efectiva)) as nom_norm")
+            ->selectRaw('COUNT(*) as cnt')
+            ->groupBy('cargo_norm','nom_norm');
+
+        // Usuarios “left” (para construir heredados)
+        $uLeftQuery = DB::table('usuarios as u')
+            ->selectRaw("UPPER(TRIM(u.funcion_efectiva)) as cargo_norm")
+            ->selectRaw("UPPER(TRIM(u.nomenclatura_efectiva)) as nom_norm")
+            ->selectRaw("CONCAT(SUBSTRING_INDEX(UPPER(TRIM(u.nomenclatura_efectiva)),'-',5),'-') as base_nom");
+
+        // RO distintos por (cargo_norm, nom_norm) para saber si existe RO exacta
+        $roDistinctQuery = DB::table('reporte_organico as ro')
+            ->selectRaw("UPPER(TRIM(ro.cargo_organico)) as cargo_norm, UPPER(TRIM(ro.nomenclatura_organico)) as nom_norm")
+            ->distinct();
+
+        // Usuarios: REGLA 2 (heredado por base) SOLO si NO tienen RO exacta
+        $uInheritedQuery = DB::query()->fromSub($uLeftQuery, 'ul')
+            ->leftJoinSub($roDistinctQuery, 'rod', function ($j) {
+                $j->on('rod.cargo_norm','=','ul.cargo_norm')
+                    ->on('rod.nom_norm'  ,'=','ul.nom_norm');
+            })
+            ->whereNull('rod.nom_norm')
+            ->selectRaw('ul.cargo_norm, ul.base_nom, COUNT(*) as cnt')
+            ->groupBy('ul.cargo_norm','ul.base_nom'); //
+
+        // ====== BASE (JOIN + FILTROS) ======
+        $listBase = DB::query()
+            ->fromSub($roQuery, 'rb')
+            ->leftJoinSub($uExactQuery, 'ue', function ($j) {
+                $j->on('ue.cargo_norm','=','rb.ro_cargo_norm')
+                    ->on('ue.nom_norm'  ,'=','rb.ro_nom_norm');
+            })
+            ->leftJoinSub($uInheritedQuery, 'ui', function ($j) {
+                $j->on('ui.cargo_norm','=','rb.ro_cargo_norm')
+                    ->on('ui.base_nom'  ,'=','rb.ro_base_nom');
+            }); //
+
+        // ====== Filtros múltiples (normalizados) ======
+        $normArr = fn(array $arr) => array_values(array_filter(array_map(
+            fn($v)=>mb_strtoupper(trim((string)$v)), (array)$arr
+        ), fn($v)=>$v!==''));
+
+        // Servicio
+        $servicios = $normArr($request->input('servicio', []));
         if ($servicios) {
-            $base->where(function ($w) use ($servicios) {
-                foreach ($servicios as $v) {
-                    $w->orWhere('ro.servicio_organico', 'like', '%' . trim($v) . '%');
-                }
-            });
+            $listBase->whereIn(DB::raw('TRIM(UPPER(rb.servicio_organico))'), $servicios);
         }
 
-        $nomenclaturas = array_values(array_filter((array) $request->input('nomenclatura', []), fn($v) => trim($v) !== ''));
+        // Nomenclatura
+        $nomenclaturas = $normArr($request->input('nomenclatura', []));
         if ($nomenclaturas) {
-            $base->where(function ($w) use ($nomenclaturas) {
-                foreach ($nomenclaturas as $v) {
-                    $w->orWhere('ro.nomenclatura_organico', 'like', '%' . trim($v) . '%');
-                }
-            });
+            $listBase->whereIn(DB::raw('TRIM(UPPER(rb.nomenclatura_organico))'), $nomenclaturas);
         }
 
-        $cargos = array_values(array_filter((array) $request->input('cargo', []), fn($v) => trim($v) !== ''));
+        // Cargo
+        $cargos = $normArr($request->input('cargo', []));
         if ($cargos) {
-            $base->where(function ($w) use ($cargos) {
-                foreach ($cargos as $v) {
-                    $w->orWhere('ro.cargo_organico', 'like', '%' . trim($v) . '%');
-                }
-            });
+            $listBase->whereIn(DB::raw('TRIM(UPPER(rb.cargo_organico))'), $cargos);
         }
 
-        // ------------ Subsistema (exacto, múltiples) ------------
-        $subsistemas = array_values(array_filter((array) $request->input('subsistema', []), fn($v) => trim($v) !== ''));
+        // Subsistema
+        $subsistemas = $normArr($request->input('subsistema', []));
         if ($subsistemas) {
-            $base->where(function ($w) use ($subsistemas) {
-                foreach ($subsistemas as $s) {
-                    $w->orWhereRaw('TRIM(UPPER(ro.subsistema)) = ?', [mb_strtoupper(trim($s))]);
-                }
-            });
+            $listBase->whereIn(DB::raw('TRIM(UPPER(rb.subsistema))'), $subsistemas);
         }
 
-        // ------------ Grado orgánico (múltiples tokens contra lista separada por comas) ------------
-        $grados = array_values(array_filter((array) $request->input('grado_organico', []), fn($v) => trim($v) !== ''));
+        // Grado Orgánico (CSV). Conservamos tu lógica REGEXP
+        $grados = $normArr($request->input('grado_organico', []));
         if ($grados) {
-            $grados = array_map(fn($g) => mb_strtoupper(trim($g)), $grados);
-            $base->where(function ($w) use ($grados) {
+            $listBase->where(function($w) use ($grados) {
                 foreach ($grados as $g) {
-                    // Coincidencia exacta de token en lista separada por comas
-                    $pattern = '(^|,)[[:space:]]*' . preg_quote($g, '/') . '([[:space:]]*,|$)';
-                    $w->orWhereRaw("UPPER(ro.grado_organico) REGEXP ?", [$pattern]);
+                    $pattern = '(^|,)[[:space:]]*'.preg_quote($g,'/').'([[:space:]]*,|$)';
+                    $w->orWhereRaw("UPPER(rb.grado_organico) REGEXP ?", [$pattern]);
                 }
             });
-        }
+        } //
 
-        // ------------ Estado (VACANTE/COMPLETO/EXCEDIDO) como OR entre los seleccionados ------------
-        $estados = array_values(array_filter((array) $request->input('estado', []), fn($v) => in_array($v, ['VACANTE','COMPLETO','EXCEDIDO'], true)));
+        // ====== Estados (VACANTE/COMPLETO/EXCEDIDO) ======
+        $efectivoExpr = "COALESCE(ue.cnt,0) + CASE WHEN rb.ro_nom_norm = rb.ro_base_nom THEN COALESCE(ui.cnt,0) ELSE 0 END";
+        $estados = array_values(array_filter((array)$request->input('estado', []),
+            fn($v)=>in_array($v, ['VACANTE','COMPLETO','EXCEDIDO'], true)
+        ));
         if ($estados) {
-            $efectivoExpr = DB::raw('(SELECT COUNT(*)
-                                      FROM usuarios u
-                                      WHERE u.nomenclatura_efectiva = ro.nomenclatura_organico
-                                        AND u.funcion_efectiva      = ro.cargo_organico)');
-            $base->where(function ($w) use ($estados, $efectivoExpr) {
+            $listBase->where(function($w) use ($estados, $efectivoExpr) {
                 foreach ($estados as $estado) {
-                    if ($estado === 'VACANTE')   $w->orWhereRaw("{$efectivoExpr} < ro.numero_organico_ideal");
-                    if ($estado === 'COMPLETO')  $w->orWhereRaw("{$efectivoExpr} = ro.numero_organico_ideal");
-                    if ($estado === 'EXCEDIDO')  $w->orWhereRaw("{$efectivoExpr} > ro.numero_organico_ideal");
+                    if ($estado === 'VACANTE')  $w->orWhereRaw("$efectivoExpr <  rb.numero_organico_ideal");
+                    if ($estado === 'COMPLETO') $w->orWhereRaw("$efectivoExpr =  rb.numero_organico_ideal");
+                    if ($estado === 'EXCEDIDO') $w->orWhereRaw("$efectivoExpr >  rb.numero_organico_ideal");
                 }
             });
+        } //
+
+        // ====== SELECT (listado principal) ======
+        $select = $listBase->cloneWithoutBindings(['select', 'orders'])
+            ->selectRaw('rb.servicio_organico, rb.nomenclatura_organico, rb.cargo_organico, rb.subsistema')
+            ->selectRaw('rb.numero_organico_ideal as organico_aprobado')
+            ->selectRaw("$efectivoExpr as organico_efectivo");
+
+        if ($this->computeAlerts) {
+            // Marcador simple de alerta (p. ej. si grados no cuadran)
+            $select->selectRaw("CASE WHEN TRIM(rb.grado_organico) = '' THEN NULL ELSE 1 END as tiene_alerta");
         }
 
-        // ====== Totales ======
-        $totales = (clone $base)
-            ->selectRaw('COALESCE(SUM(ro.numero_organico_ideal),0) as total_aprobado')
-            ->selectRaw('COALESCE(SUM((
-                SELECT COUNT(*) FROM usuarios u
-                WHERE u.nomenclatura_efectiva = ro.nomenclatura_organico
-                  AND u.funcion_efectiva      = ro.cargo_organico
-            )),0) as total_efectivo')
+        // Orden y paginación
+        $datos = $select
+            ->orderBy('rb.servicio_organico')
+            ->orderBy('rb.nomenclatura_organico')
+            ->orderBy('rb.cargo_organico')
+            ->paginate(100)
+            ->appends($request->query());
+
+        // ====== Totales (para cabecera) ======
+        $totales = DB::query()
+            ->fromSub($roQuery, 'rb')
+            ->leftJoinSub($uExactQuery, 'ue', function ($j) {
+                $j->on('ue.cargo_norm','=','rb.ro_cargo_norm')
+                    ->on('ue.nom_norm'  ,'=','rb.ro_nom_norm');
+            })
+            ->leftJoinSub($uInheritedQuery, 'ui', function ($j) {
+                $j->on('ui.cargo_norm','=','rb.ro_cargo_norm')
+                    ->on('ui.base_nom'  ,'=','rb.ro_base_nom');
+            })
+            ->selectRaw('SUM(rb.numero_organico_ideal) as total_aprobado')
+            ->selectRaw("SUM(COALESCE(ue.cnt,0) + CASE WHEN rb.ro_nom_norm = rb.ro_base_nom THEN COALESCE(ui.cnt,0) ELSE 0 END) as total_efectivo")
             ->first();
 
-        // ====== Listado principal + bandera no_cumplen_grado ======
-        $datos = (clone $base)
-            ->select(
-                'ro.servicio_organico',
-                'ro.nomenclatura_organico',
-                'ro.cargo_organico',
-                'ro.grado_organico',
-                DB::raw('ro.numero_organico_ideal as organico_aprobado'),
-                DB::raw('(SELECT COUNT(*) FROM usuarios u
-                          WHERE u.nomenclatura_efectiva = ro.nomenclatura_organico
-                            AND u.funcion_efectiva      = ro.cargo_organico) as organico_efectivo')
-            )
-            ->selectRaw("(SELECT COUNT(*)
-                          FROM usuarios u
-                          WHERE u.nomenclatura_efectiva = ro.nomenclatura_organico
-                            AND u.funcion_efectiva      = ro.cargo_organico
-                            AND ro.grado_organico IS NOT NULL
-                            AND TRIM(ro.grado_organico) <> ''
-                            AND (
-                                  u.grado IS NULL
-                                  OR u.grado = ''
-                                  OR NOT (
-                                       UPPER(ro.grado_organico)
-                                       REGEXP CONCAT('(^|,)[[:space:]]*', UPPER(TRIM(u.grado)), '([[:space:]]*,|$)')
-                                  )
-                                )
-                        ) AS no_cumplen_grado")
-            ->paginate(50)
-            ->withQueryString();
-
-        // ====== Resumen por SUBSISTEMA ======
-        $efectivoExprSql = '(SELECT COUNT(*) FROM usuarios u
-                             WHERE u.nomenclatura_efectiva = ro.nomenclatura_organico
-                               AND u.funcion_efectiva      = ro.cargo_organico)';
-
-        $statsSubsistema = (clone $base)
-            ->selectRaw("COALESCE(NULLIF(TRIM(ro.subsistema),''),'SIN SUBSISTEMA') as subsistema")
-            ->selectRaw("SUM(ro.numero_organico_ideal) as total_aprobado")
-            ->selectRaw("SUM($efectivoExprSql) as total_efectivo")
-            ->selectRaw("SUM(CASE WHEN ($efectivoExprSql) <  ro.numero_organico_ideal THEN 1 ELSE 0 END) as cargos_vacantes")
-            ->selectRaw("SUM(CASE WHEN ($efectivoExprSql) =  ro.numero_organico_ideal THEN 1 ELSE 0 END) as cargos_completos")
-            ->selectRaw("SUM(CASE WHEN ($efectivoExprSql) >  ro.numero_organico_ideal THEN 1 ELSE 0 END) as cargos_excedidos")
-            ->selectRaw("SUM(($efectivoExprSql) - ro.numero_organico_ideal) as diferencia_total")
-            ->groupBy('subsistema')
-            ->orderBy('subsistema')
+        // ====== Resumen por subsistema (para modal) ======
+        $statsSubsistema = DB::query()
+            ->fromSub($roQuery, 'rb')
+            ->leftJoinSub($uExactQuery, 'ue', function ($j) {
+                $j->on('ue.cargo_norm','=','rb.ro_cargo_norm')
+                    ->on('ue.nom_norm'  ,'=','rb.ro_nom_norm');
+            })
+            ->leftJoinSub($uInheritedQuery, 'ui', function ($j) {
+                $j->on('ui.cargo_norm','=','rb.ro_cargo_norm')
+                    ->on('ui.base_nom'  ,'=','rb.ro_base_nom');
+            })
+            ->selectRaw('rb.subsistema')
+            ->selectRaw('SUM(rb.numero_organico_ideal) as total_aprobado')
+            ->selectRaw("SUM($efectivoExpr) as total_efectivo")
+            ->selectRaw("SUM(CASE WHEN $efectivoExpr < rb.numero_organico_ideal THEN 1 ELSE 0 END) as cargos_vacantes")
+            ->selectRaw("SUM(CASE WHEN $efectivoExpr = rb.numero_organico_ideal THEN 1 ELSE 0 END) as cargos_completos")
+            ->selectRaw("SUM(CASE WHEN $efectivoExpr > rb.numero_organico_ideal THEN 1 ELSE 0 END) as cargos_excedidos")
+            ->groupBy('rb.subsistema')
             ->get();
 
-        // ====== Opciones para selectores ======
-        $opcionesServicio      = $this->distinctOptions('servicio_organico');
-        $opcionesNomenclatura  = $this->distinctOptions('nomenclatura_organico');
-        $opcionesCargo         = $this->distinctOptions('cargo_organico');
-        $opcionesGrado         = $this->buildGradoOptions();
-        $opcionesSubsistema    = $this->buildSubsistemaOptions();
+        // ====== Opciones de filtros (para los multiselect del blade) ======
+        // Saco de la tabla RO para no inflar el query principal
+        $opcionesServicio     = DB::table('reporte_organico')->whereNotNull('servicio_organico')->distinct()->orderBy('servicio_organico')->pluck('servicio_organico')->toArray();
+        $opcionesNomenclatura = DB::table('reporte_organico')->whereNotNull('nomenclatura_organico')->distinct()->orderBy('nomenclatura_organico')->pluck('nomenclatura_organico')->toArray();
+        $opcionesCargo        = DB::table('reporte_organico')->whereNotNull('cargo_organico')->distinct()->orderBy('cargo_organico')->pluck('cargo_organico')->toArray();
+        $opcionesSubsistema   = DB::table('reporte_organico')->whereNotNull('subsistema')->distinct()->orderBy('subsistema')->pluck('subsistema')->toArray();
 
-        return view('reporte_organico.visualizador', compact(
-            'datos','totales',
-            'opcionesServicio','opcionesNomenclatura','opcionesCargo',
-            'opcionesGrado','opcionesSubsistema',
-            'statsSubsistema'
-        ));
-    }
-
-    public function buscarNomenclatura(Request $request)
-    {
-        $valor = $request->input('query');
-
-        $datos = DB::table('reporte_organico')
-            ->select(
-                'servicio_organico',
-                'nomenclatura_organico',
-                'cargo_organico',
-                DB::raw('SUM(numero_organico_ideal) as organico_aprobado')
-            )
-            ->where('nomenclatura_organico', 'LIKE', "%$valor%")
-            ->groupBy('servicio_organico', 'nomenclatura_organico', 'cargo_organico')
-            ->get();
-
-        return response()->json([
-            'html' => View::make('reporte_organico.partials.tabla', ['datos' => $datos])->render()
+        return view('reporte_organico.visualizador', [
+            'datos'                => $datos,
+            'totales'              => $totales,
+            'statsSubsistema'      => $statsSubsistema,
+            'opcionesServicio'     => $opcionesServicio,
+            'opcionesNomenclatura' => $opcionesNomenclatura,
+            'opcionesCargo'        => $opcionesCargo,
+            'opcionesSubsistema'   => $opcionesSubsistema,
         ]);
     }
 
     public function ocupantes(Request $request)
     {
-        $nomenclatura = $request->input('nomenclatura');
-        $cargo        = $request->input('cargo');
+        // Normalización
+        $nomenclatura = (string) $request->query('nomenclatura', '');
+        $cargo        = (string) $request->query('cargo', '');
+        $nomNorm      = mb_strtoupper(trim($nomenclatura));
+        $cargoNorm    = mb_strtoupper(trim($cargo));
 
-        $ocupantes = DB::table('usuarios')
-            ->select('cedula','grado','apellidos_nombres','estado_efectivo')
-            ->where('nomenclatura_efectiva', $nomenclatura)
-            ->where('funcion_efectiva',      $cargo)
-            ->orderBy('grado')
-            ->orderBy('apellidos_nombres')
-            ->get();
+        // Ocupantes exactos
+        $ocupantesExact = DB::table('usuarios as u')
+            ->select('u.cedula','u.grado','u.apellidos_nombres','u.estado_efectivo')
+            ->whereRaw('UPPER(TRIM(u.funcion_efectiva)) = ?', [$cargoNorm])
+            ->whereRaw('UPPER(TRIM(u.nomenclatura_efectiva)) = ?', [$nomNorm])
+            ->orderBy('u.grado')->orderBy('u.apellidos_nombres')->get();
 
+        // Info del cargo exacto (para mostrar grados permitidos y nro ideal)
         $infoCargo = DB::table('reporte_organico as ro')
             ->select(
                 'ro.servicio_organico',
@@ -195,13 +224,64 @@ class ReporteOrganicoVisualController extends Controller
                 'ro.cargo_organico',
                 'ro.grado_organico',
                 'ro.personal_organico',
-                'ro.numero_organico_ideal'
+                'ro.numero_organico_ideal',
+                'ro.subsistema'
             )
-            ->where('ro.nomenclatura_organico', $nomenclatura)
-            ->where('ro.cargo_organico',        $cargo)
+            ->whereRaw('UPPER(TRIM(ro.cargo_organico)) = ?', [$cargoNorm])
+            ->whereRaw('UPPER(TRIM(ro.nomenclatura_organico)) = ?', [$nomNorm])
             ->orderBy('ro.servicio_organico')
-            ->get();
+            ->get(); //
 
+        if ($ocupantesExact->count() > 0) {
+            // Grados permitidos (del RO exacto)
+            $gradosPermitidos = [];
+            foreach ($infoCargo as $fila) {
+                $tokens = preg_split('/[,;]+/u', (string)($fila->grado_organico ?? ''), -1, PREG_SPLIT_NO_EMPTY);
+                foreach ($tokens as $t) {
+                    $t = mb_strtoupper(trim($t));
+                    if ($t !== '') $gradosPermitidos[$t] = true;
+                }
+            }
+            $gradosPermitidos = array_keys($gradosPermitidos);
+
+            // No usar compact con alias
+            return view('reporte_organico.ocupantes', [
+                'ocupantes'        => $ocupantesExact,
+                'nomenclatura'     => $nomenclatura,
+                'cargo'            => $cargo,
+                'infoCargo'        => $infoCargo,
+                'gradosPermitidos' => $gradosPermitidos,
+            ]); //
+        }
+
+        // ------- Regla 2: HERENCIA/BASE (función igual + misma base de distrito) -------
+        $parts = array_values(array_filter(explode('-', $nomNorm), fn($p) => $p !== ''));
+        $base  = implode('-', array_slice($parts, 0, 5)) . '-';
+
+        $ocupantesBase = DB::table('usuarios as u')
+            ->select('u.cedula','u.grado','u.apellidos_nombres','u.estado_efectivo')
+            ->whereRaw('UPPER(TRIM(u.funcion_efectiva)) = ?', [$cargoNorm])
+            ->whereRaw("CONCAT(SUBSTRING_INDEX(UPPER(TRIM(u.nomenclatura_efectiva)),'-',5),'-') = ?", [$base])
+            ->orderBy('u.grado')->orderBy('u.apellidos_nombres')->get(); //
+
+        if ($infoCargo->isEmpty()) {
+            // Si no hay RO exacto, intentamos una cabecera de la misma base+función
+            $infoCargo = DB::table('reporte_organico as ro')
+                ->select(
+                    'ro.servicio_organico',
+                    'ro.nomenclatura_organico',
+                    'ro.cargo_organico',
+                    'ro.grado_organico',
+                    'ro.personal_organico',
+                    'ro.numero_organico_ideal'
+                )
+                ->whereRaw('UPPER(TRIM(ro.cargo_organico)) = ?', [$cargoNorm])
+                ->whereRaw("CONCAT(SUBSTRING_INDEX(UPPER(TRIM(ro.nomenclatura_organico)),'-',5),'-') = ?", [$base])
+                ->limit(1)
+                ->get();
+        }
+
+        // Igual construimos grados permitidos desde infoCargo
         $gradosPermitidos = [];
         foreach ($infoCargo as $fila) {
             $tokens = preg_split('/[,;]+/u', (string)($fila->grado_organico ?? ''), -1, PREG_SPLIT_NO_EMPTY);
@@ -212,136 +292,119 @@ class ReporteOrganicoVisualController extends Controller
         }
         $gradosPermitidos = array_keys($gradosPermitidos);
 
-        return view('reporte_organico.ocupantes', compact(
-            'ocupantes','nomenclatura','cargo','infoCargo','gradosPermitidos'
-        ));
+        return view('reporte_organico.ocupantes', [
+            'ocupantes'        => $ocupantesBase,
+            'nomenclatura'     => $nomenclatura,
+            'cargo'            => $cargo,
+            'infoCargo'        => $infoCargo,
+            'gradosPermitidos' => $gradosPermitidos,
+        ]);
     }
 
     public function exportarExcel(Request $request)
     {
-        return Excel::download(new ReporteOrganicoExport($request), 'reporte_organico_filtrado.xlsx');
-    }
+        // ====== Subqueries base (idénticas al index) ======
+        $roQuery = DB::table('reporte_organico as ro')
+            ->selectRaw('ro.servicio_organico')
+            ->selectRaw('ro.nomenclatura_organico')
+            ->selectRaw('ro.cargo_organico')
+            ->selectRaw('ro.grado_organico')
+            ->selectRaw('ro.numero_organico_ideal')
+            ->selectRaw('ro.subsistema')
+            ->selectRaw('UPPER(TRIM(ro.nomenclatura_organico)) as ro_nom_norm')
+            ->selectRaw("CONCAT(SUBSTRING_INDEX(UPPER(TRIM(ro.nomenclatura_organico)),'-',5),'-') as ro_base_nom")
+            ->selectRaw('UPPER(TRIM(ro.cargo_organico)) as ro_cargo_norm'); //
 
-    public function obtenerEstadisticas(Request $request)
-    {
-        $query = DB::table('reporte_organico as ro')
-            ->select(
-                DB::raw('(SELECT COUNT(*) FROM usuarios u
-                          WHERE u.nomenclatura_efectiva = ro.nomenclatura_organico
-                            AND u.funcion_efectiva      = ro.cargo_organico) as organico_efectivo'),
-                'ro.numero_organico_ideal as organico_aprobado'
-            );
+        $uExactQuery = DB::table('usuarios as u')
+            ->selectRaw("UPPER(TRIM(u.funcion_efectiva)) as cargo_norm")
+            ->selectRaw("UPPER(TRIM(u.nomenclatura_efectiva)) as nom_norm")
+            ->selectRaw('COUNT(*) as cnt')
+            ->groupBy('cargo_norm','nom_norm'); //
 
-        // Reutiliza la misma lógica de filtros múltiples:
-        $servicios = array_values(array_filter((array) $request->input('servicio', []), fn($v) => trim($v) !== ''));
-        if ($servicios) {
-            $query->where(function ($w) use ($servicios) {
-                foreach ($servicios as $v) $w->orWhere('ro.servicio_organico','like','%'.trim($v).'%');
-            });
-        }
-        $nomenclaturas = array_values(array_filter((array) $request->input('nomenclatura', []), fn($v) => trim($v) !== ''));
-        if ($nomenclaturas) {
-            $query->where(function ($w) use ($nomenclaturas) {
-                foreach ($nomenclaturas as $v) $w->orWhere('ro.nomenclatura_organico','like','%'.trim($v).'%');
-            });
-        }
-        $cargos = array_values(array_filter((array) $request->input('cargo', []), fn($v) => trim($v) !== ''));
-        if ($cargos) {
-            $query->where(function ($w) use ($cargos) {
-                foreach ($cargos as $v) $w->orWhere('ro.cargo_organico','like','%'.trim($v).'%');
-            });
-        }
-        $subsistemas = array_values(array_filter((array) $request->input('subsistema', []), fn($v) => trim($v) !== ''));
-        if ($subsistemas) {
-            $query->where(function ($w) use ($subsistemas) {
-                foreach ($subsistemas as $s) $w->orWhereRaw('TRIM(UPPER(ro.subsistema)) = ?', [mb_strtoupper(trim($s))]);
-            });
-        }
-        $grados = array_values(array_filter((array) $request->input('grado_organico', []), fn($v) => trim($v) !== ''));
+        $uLeftQuery = DB::table('usuarios as u')
+            ->selectRaw("UPPER(TRIM(u.funcion_efectiva)) as cargo_norm")
+            ->selectRaw("UPPER(TRIM(u.nomenclatura_efectiva)) as nom_norm")
+            ->selectRaw("CONCAT(SUBSTRING_INDEX(UPPER(TRIM(u.nomenclatura_efectiva)),'-',5),'-') as base_nom"); //
+
+        $roDistinctQuery = DB::table('reporte_organico as ro')
+            ->selectRaw("UPPER(TRIM(ro.cargo_organico)) as cargo_norm, UPPER(TRIM(ro.nomenclatura_organico)) as nom_norm")
+            ->distinct(); //
+
+        $uInheritedQuery = DB::query()->fromSub($uLeftQuery, 'ul')
+            ->leftJoinSub($roDistinctQuery, 'rod', function ($j) {
+                $j->on('rod.cargo_norm','=','ul.cargo_norm')
+                    ->on('rod.nom_norm'  ,'=','ul.nom_norm');
+            })
+            ->whereNull('rod.nom_norm')
+            ->selectRaw('ul.cargo_norm, ul.base_nom, COUNT(*) as cnt')
+            ->groupBy('ul.cargo_norm','ul.base_nom'); //
+
+        $q = DB::query()
+            ->fromSub($roQuery, 'rb')
+            ->leftJoinSub($uExactQuery, 'ue', function ($j) {
+                $j->on('ue.cargo_norm','=','rb.ro_cargo_norm')
+                    ->on('ue.nom_norm'  ,'=','rb.ro_nom_norm');
+            })
+            ->leftJoinSub($uInheritedQuery, 'ui', function ($j) {
+                $j->on('ui.cargo_norm','=','rb.ro_cargo_norm')
+                    ->on('ui.base_nom'  ,'=','rb.ro_base_nom');
+            }); //
+
+        // ====== Aplicar los mismos filtros que en index (normalizados) ======
+        $normArr = fn(array $arr) => array_values(array_filter(array_map(
+            fn($v)=>mb_strtoupper(trim((string)$v)), (array)$arr
+        ), fn($v)=>$v!==''));
+
+        $servicios     = $normArr($request->input('servicio', []));
+        $nomenclaturas = $normArr($request->input('nomenclatura', []));
+        $cargos        = $normArr($request->input('cargo', []));
+        $subsistemas   = $normArr($request->input('subsistema', []));
+        $grados        = $normArr($request->input('grado_organico', []));
+        $efectivoExpr  = "COALESCE(ue.cnt,0) + CASE WHEN rb.ro_nom_norm = rb.ro_base_nom THEN COALESCE(ui.cnt,0) ELSE 0 END";
+
+        if ($servicios)     $q->whereIn(DB::raw('TRIM(UPPER(rb.servicio_organico))'), $servicios);
+        if ($nomenclaturas) $q->whereIn(DB::raw('TRIM(UPPER(rb.nomenclatura_organico))'), $nomenclaturas);
+        if ($cargos)        $q->whereIn(DB::raw('TRIM(UPPER(rb.cargo_organico))'), $cargos);
+        if ($subsistemas)   $q->whereIn(DB::raw('TRIM(UPPER(rb.subsistema))'), $subsistemas);
+
         if ($grados) {
-            $grados = array_map(fn($g) => mb_strtoupper(trim($g)), $grados);
-            $query->where(function ($w) use ($grados) {
+            $q->where(function($w) use ($grados) {
                 foreach ($grados as $g) {
-                    $pattern = '(^|,)[[:space:]]*' . preg_quote($g, '/') . '([[:space:]]*,|$)';
-                    $w->orWhereRaw("UPPER(ro.grado_organico) REGEXP ?", [$pattern]);
+                    $pattern = '(^|,)[[:space:]]*'.preg_quote($g,'/').'([[:space:]]*,|$)';
+                    $w->orWhereRaw("UPPER(rb.grado_organico) REGEXP ?", [$pattern]);
                 }
-            });
+            }); //
         }
 
-        $datos = $query->get();
-
-        $vacantes = 0; $completos = 0; $excedidos = 0;
-        foreach ($datos as $item) {
-            if ($item->organico_efectivo < $item->organico_aprobado) $vacantes++;
-            elseif ($item->organico_efectivo == $item->organico_aprobado) $completos++;
-            else $excedidos++;
+        $estados = array_values(array_filter((array)$request->input('estado', []),
+            fn($v)=>in_array($v, ['VACANTE','COMPLETO','EXCEDIDO'], true)
+        ));
+        if ($estados) {
+            $q->where(function($w) use ($estados,$efectivoExpr){
+                foreach ($estados as $estado) {
+                    if ($estado==='VACANTE')  $w->orWhereRaw("$efectivoExpr <  rb.numero_organico_ideal");
+                    if ($estado==='COMPLETO') $w->orWhereRaw("$efectivoExpr =  rb.numero_organico_ideal");
+                    if ($estado==='EXCEDIDO') $w->orWhereRaw("$efectivoExpr >  rb.numero_organico_ideal");
+                }
+            }); //
         }
 
-        return response()->json([
-            'vacantes'  => $vacantes,
-            'completos' => $completos,
-            'excedidos' => $excedidos
-        ]);
+        // ====== Selección de columnas para export ======
+        $rows = $q->cloneWithoutBindings(['select','orders'])
+            ->selectRaw('rb.servicio_organico as Servicio')
+            ->selectRaw('rb.nomenclatura_organico as Nomenclatura')
+            ->selectRaw('rb.cargo_organico as Cargo')
+            ->selectRaw('rb.subsistema as Subsistema')
+            ->selectRaw('rb.numero_organico_ideal as Aprobado')
+            ->selectRaw("$efectivoExpr as Efectivo")
+            ->orderBy('rb.servicio_organico')
+            ->orderBy('rb.nomenclatura_organico')
+            ->orderBy('rb.cargo_organico')
+            ->get();
+
+        // Usa tu export existente (ajusta el constructor si tu clase espera otra cosa)
+        $filename = 'reporte_organico_'.now()->format('Ymd_His').'.xlsx';
+        return Excel::download(new \App\Exports\ReporteOrganicoExport($rows), $filename);
     }
 
-    public function exportResumenXlsx(Request $request)
-    {
-        $filename = 'resumen_organico_' . now()->format('Ymd_His') . '.xlsx';
-        $filters = $request->only(['servicio','nomenclatura','cargo','estado','grado_organico','subsistema']);
-        return Excel::download(new ResumenOrganicoExport($filters), $filename);
-    }
-
-    /** Distintos valores para un campo de reporte_organico */
-    private function distinctOptions(string $column): array
-    {
-        return DB::table('reporte_organico')
-            ->whereNotNull($column)
-            ->whereRaw("TRIM($column) <> ''")
-            ->select($column)
-            ->distinct()
-            ->orderBy($column)
-            ->pluck($column)
-            ->toArray();
-    }
-
-    /** Opciones normalizadas de grado */
-    private function buildGradoOptions(): array
-    {
-        $rows = DB::table('reporte_organico')
-            ->whereNotNull('grado_organico')
-            ->pluck('grado_organico');
-
-        $tokens = [];
-        foreach ($rows as $row) {
-            $partes = preg_split('/[,;]+/u', (string) $row);
-            foreach ($partes as $p) {
-                $p = mb_strtoupper(trim($p));
-                if ($p !== '') $tokens[] = $p;
-            }
-        }
-        $tokens = array_values(array_unique($tokens));
-
-        $orden = ['GRAS','GRAI','GRAD','CRNL','TCNL','MAYR','CPTN','TNTE','SBTE','SBOM','SBOP','SBOS','SGOP','SGOS','CBOP','CBOS','POLI'];
-        usort($tokens, function ($a, $b) use ($orden) {
-            $ia = array_search($a, $orden, true);
-            $ib = array_search($b, $orden, true);
-            $ia = ($ia === false) ? 999 : $ia;
-            $ib = ($ib === false) ? 999 : $ib;
-            return $ia <=> $ib;
-        });
-        return $tokens;
-    }
-
-    /** Opciones para el selector de subsistema */
-    private function buildSubsistemaOptions(): array
-    {
-        return DB::table('reporte_organico')
-            ->whereNotNull('subsistema')
-            ->whereRaw("TRIM(subsistema) <> ''")
-            ->select('subsistema')
-            ->distinct()
-            ->orderBy('subsistema')
-            ->pluck('subsistema')
-            ->toArray();
-    }
 }

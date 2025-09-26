@@ -1,82 +1,61 @@
 <?php
+
 namespace App\Exports;
 
-use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Collection;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
-use Maatwebsite\Excel\Concerns\WithMapping;
-use Illuminate\Http\Request;
+use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 
-class ReporteOrganicoExport implements FromCollection, WithHeadings, WithMapping
+class ReporteOrganicoExport implements FromCollection, WithHeadings, ShouldAutoSize
 {
-    protected $request;
+    /** @var \Illuminate\Support\Collection */
+    protected Collection $rows;
 
-    public function __construct(Request $request)
+    /** @var array<int,string> */
+    protected array $headings;
+
+    /**
+     * @param \Illuminate\Support\Collection $rows
+     */
+    public function __construct(Collection $rows)
     {
-        $this->request = $request;
+        $this->rows = $rows->values();
+
+        // Encabezados: toma las claves de la primera fila, o usa fijos
+        if ($this->rows->isNotEmpty()) {
+            $first = $this->rows->first();
+            $this->headings = array_keys(is_array($first) ? $first : (array) $first);
+        } else {
+            $this->headings = [
+                'Servicio',
+                'Nomenclatura',
+                'Cargo',
+                'Subsistema',
+                'Aprobado',
+                'Efectivo',
+            ];
+        }
     }
 
-    public function collection()
+    /**
+     * Devuelve las filas para Excel
+     */
+    public function collection(): Collection
     {
-        $query = DB::table('reporte_organico as ro')
-            ->select(
-                'ro.servicio_organico',
-                'ro.nomenclatura_organico',
-                'ro.cargo_organico',
-                'ro.numero_organico_ideal as organico_aprobado',
-                DB::raw('(SELECT COUNT(*) FROM usuarios u WHERE u.nomenclatura_efectiva = ro.nomenclatura_organico AND u.funcion_efectiva = ro.cargo_organico) as organico_efectivo')
-            );
-
-        // Aplicar filtros del request
-        if ($this->request->filled('servicio')) {
-            $query->where('ro.servicio_organico', 'like', '%' . $this->request->servicio . '%');
-        }
-
-        if ($this->request->filled('nomenclatura')) {
-            $query->where('ro.nomenclatura_organico', 'like', '%' . $this->request->nomenclatura . '%');
-        }
-
-        if ($this->request->filled('cargo')) {
-            $query->where('ro.cargo_organico', 'like', '%' . $this->request->cargo . '%');
-        }
-
-        if ($this->request->filled('estado')) {
-            switch ($this->request->estado) {
-                case 'VACANTE':
-                    $query->havingRaw('organico_efectivo < organico_aprobado');
-                    break;
-                case 'COMPLETO':
-                    $query->havingRaw('organico_efectivo = organico_aprobado');
-                    break;
-                case 'EXCEDIDO':
-                    $query->havingRaw('organico_efectivo > organico_aprobado');
-                    break;
-            }
-        }
-
-        return $query->get();
+        return $this->rows->map(function ($row) {
+            $rowArr = is_array($row) ? $row : (array) $row;
+            return collect($this->headings)
+                ->map(fn($h) => $rowArr[$h] ?? '')
+                ->values();
+        });
     }
 
+    /**
+     * Encabezados de la hoja
+     */
     public function headings(): array
     {
-        return [
-            'Servicio Orgánico',
-            'Nomenclatura Orgánico',
-            'Cargo Orgánico',
-            'Orgánico Aprobado',
-            'Orgánico Efectivo',
-        ];
-    }
-
-    public function map($row): array
-    {
-        return [
-            $row->servicio_organico,
-            $row->nomenclatura_organico,
-            $row->cargo_organico,
-            $row->organico_aprobado,
-            $row->organico_efectivo,
-        ];
+        return $this->headings;
     }
 }

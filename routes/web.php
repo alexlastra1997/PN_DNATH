@@ -20,6 +20,8 @@ use App\Http\Controllers\TruequeController;
 use Illuminate\Pagination\LengthAwarePaginator;
 use App\Http\Controllers\GenerarPasesController;
 use App\Http\Controllers\ComparadorExcelController;
+use App\Http\Controllers\NumericosNomenclaturaEfectivaController;
+use App\Http\Controllers\MapaNdescController;
 
 
 
@@ -88,9 +90,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/cargos/ocupado/{cargo}', [CargoController::class, 'ocupadoPorUsuarios'])->name('cargos.ocupado');
     Route::delete('/cargos/eliminar-todo', [CargoController::class, 'eliminarTodo'])->name('cargos.eliminarTodo');
 
-    Route::get('/importar', [ImportExcelController::class, 'showForm']);
+    Route::get('/importar', [ImportExcelController::class, 'showForm'])->name('importar.form');
     Route::post('/importar', [ImportExcelController::class, 'importar'])->name('importar.excel');
-    Route::delete('/importar-excel/eliminar-todos', [ImportExcelController::class, 'eliminarTodos'])->name('importar.excel.eliminar.todos');
+    Route::post('/importar/eliminar', [ImportExcelController::class, 'eliminarTodos'])->name('importar.eliminar');
+
     Route::get('/importar-cargos', [CargoController::class, 'index'])->name('cargos.index');
     Route::post('/importar-cargos', [CargoController::class, 'importar'])->name('cargos.importar');
     Route::get('/provincias', [ProvinciaController::class, 'index'])->name('provincias.index');
@@ -145,17 +148,17 @@ Route::middleware('auth')->group(function () {
     Route::get('/trueque', [TruequeController::class, 'index'])->name('trueque.index');
     Route::post('/procesar-trueque', [TruequeController::class, 'procesar'])->name('trueque.procesar');
 
+    Route::get('/reporte-organico/importar', [ReporteOrganicoController::class, 'showForm'])->name('reporte.form');
+    Route::post('/reporte-organico/importar', [ReporteOrganicoController::class, 'importar'])->name('reporte.importar');
 
-    Route::prefix('reporte-organico')->name('reporte_organico.')->group(function () {
-        Route::get('/',               [ReporteOrganicoVisualController::class, 'index'])->name('index');
-        Route::get('/ocupantes',      [ReporteOrganicoVisualController::class, 'ocupantes'])->name('ocupantes');
+    Route::get('/reporte-organico', [\App\Http\Controllers\ReporteOrganicoVisualController::class, 'index'])
+        ->name('reporte_organico.index');
 
-        // Export detallado con los filtros del visualizador
-        Route::get('/exportar-excel', [ReporteOrganicoVisualController::class, 'exportarExcel'])->name('exportarExcel');
+    Route::get('/reporte-organico/ocupantes', [\App\Http\Controllers\ReporteOrganicoVisualController::class, 'ocupantes'])
+        ->name('reporte_organico.ocupantes');
 
-        // (Opcional) Export de resumen por subsistema con los filtros del visualizador
-        Route::get('/export-resumen', [ReporteOrganicoVisualController::class, 'exportResumenXlsx'])->name('exportResumenXlsx');
-    });
+    Route::get('reporte_organico/exportar-excel', [ReporteOrganicoVisualController::class, 'exportarExcel'])
+        ->name('reporte_organico.exportar_excel');
 
 
     Route::get('/generar-pases', [GenerarPasesController::class, 'index'])
@@ -165,6 +168,19 @@ Route::middleware('auth')->group(function () {
     Route::get('/comparador-excel', [ComparadorExcelController::class, 'index'])->name('comparador.index');
     Route::post('/comparador-excel/procesar', [ComparadorExcelController::class, 'procesar'])->name('comparador.procesar');
     Route::post('/comparador-excel/exportar', [ComparadorExcelController::class, 'exportar'])->name('comparador.exportar');
+
+    Route::get('/numericos/nomenclatura-efectiva', [NumericosNomenclaturaEfectivaController::class, 'index'])
+        ->name('numericos.nomenclatura_efectiva');
+
+    Route::get('/numericos/nomenclatura-efectiva/export', [NumericosNomenclaturaEfectivaController::class, 'export'])
+        ->name('numericos.nomenclatura_efectiva.export');
+
+    Route::get('/mapa-ndesc', [MapaNdescController::class, 'index'])->name('mapa.ndesc');
+
+// zona: 1..9  | subzonaSlug: slug de la subzona (ESMERALDAS -> esmeraldas)
+    Route::get('/mapa-ndesc/z{zona}/sz/{subzonaSlug}', [MapaNdescController::class, 'show'])->name('ndesc.subzona.show');
+    // Exportar a Excel (una hoja por tab)
+    Route::get('/mapa-ndesc/{zona}/{subzona}/export', [MapaNdescController::class, 'export'])->name('mapa.ndesc.export');
 
 });
 

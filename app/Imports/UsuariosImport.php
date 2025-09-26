@@ -2,18 +2,43 @@
 
 namespace App\Imports;
 
+use Carbon\Carbon;
+use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use Maatwebsite\Excel\Concerns\ToModel;
 use Maatwebsite\Excel\Concerns\WithHeadingRow;
-use Carbon\Carbon;
+use Maatwebsite\Excel\Concerns\WithChunkReading;
+use Maatwebsite\Excel\Concerns\SkipsEmptyRows;
+use Maatwebsite\Excel\Concerns\WithBatchInserts;
 
-class UsuariosImport implements ToModel, WithHeadingRow
+class UsuariosImport implements ToModel, WithHeadingRow, WithChunkReading, WithBatchInserts, SkipsEmptyRows
 {
+    /** @var array<string> */
+    protected array $columns;
+
+    /** @var int */
+    protected int $ok = 0;
+
+    /** @var array<int, array{fila:int, cedula?:string, motivo:string}> */
+    protected array $errores = [];
+
+    /** @var int */
+    protected int $filaActual = 1; // HeadingRow = 1
+
+    public function __construct()
+    {
+        // Solo mapear a columnas realmente existentes en la tabla 'usuarios'
+        $this->columns = Schema::getColumnListing('usuarios');
+    }
+
+    /** Compatibilidad con tu método previo */
     protected function convertirFecha($valor)
     {
         try {
             if (is_numeric($valor)) {
+                // Excel 1900 system; ajustar -2 por bug del leap-year
                 return Carbon::createFromDate(1900, 1, 1)->addDays($valor - 2)->format('Y-m-d');
             }
             return Carbon::parse($valor)->format('Y-m-d');
@@ -22,129 +47,136 @@ class UsuariosImport implements ToModel, WithHeadingRow
         }
     }
 
+    /** Convierte a fecha Y-m-d cualquier campo cuyo nombre contenga "fecha" */
+    protected function toDate($valor): ?string
+    {
+        if ($valor === null || $valor === '') return null;
+        try {
+            if (is_numeric($valor)) {
+                return Carbon::createFromDate(1900, 1, 1)->addDays(((int)$valor) - 2)->format('Y-m-d');
+            }
+            return Carbon::parse((string)$valor)->format('Y-m-d');
+        } catch (\Throwable $e) {
+            return null;
+        }
+    }
+
+    /** Normaliza encabezados: tildes → ASCII, snake_case y limpieza */
+    protected function normKey(string $k): string
+    {
+        $k = Str::of($k)
+            ->ascii()
+            ->lower()
+            ->replace(['#', '%', '/', '\\'], ' ')
+            ->replace(['(', ')', '.', ',', ';', ':', '[', ']', '{', '}', '"', '\''], '')
+            ->replace(['-'], ' ')
+            ->squish()
+            ->replace(' ', '_')
+            ->value();
+
+        // Alias comunes; añade los tuyos si hace falta
+        $aliases = [
+            'cedula_'                => 'cedula',
+            'cédula'                 => 'cedula',
+            'apellidos_y_nombres'    => 'apellidos_nombres',
+            'apellidos_nombres_'     => 'apellidos_nombres',
+            'provincia_trabaja_'     => 'provincia_trabaja',
+            'funcion_efectiva_'      => 'funcion_efectiva',
+            'nomenclatura_efectiva_' => 'nomenclatura_efectiva',
+            'fechapresentacion'      => 'fechaPresentacion',
+            'numerodias'             => 'numeroDias',
+        ];
+        return $aliases[$k] ?? $k;
+    }
+
+    /** Aplica normalización de encabezados a toda la fila */
+    protected function normRow(array $row): array
+    {
+        $out = [];
+        foreach ($row as $k => $v) {
+            $out[$this->normKey((string)$k)] = is_string($v) ? trim($v) : $v;
+        }
+        return $out;
+    }
+
+    /** Normaliza cédula: solo dígitos y rellena a 10 */
+    protected function normCedula(?string $c): ?string
+    {
+        if ($c === null) return null;
+        $digits = preg_replace('/\D+/', '', $c) ?? '';
+        if ($digits === '') return null;
+        return str_pad($digits, 10, '0', STR_PAD_LEFT);
+    }
+
     public function model(array $row)
     {
+        $this->filaActual++;
+
+        // 1) Normaliza encabezados/valores
+        $r = $this->normRow($row);
+
+        // 2) Clave obligatoria: cédula
+        $ced = $this->normCedula($r['cedula'] ?? null);
+        if (!$ced) {
+            $this->errores[] = ['fila' => $this->filaActual, 'motivo' => 'Falta cédula o inválida'];
+            return null;
+        }
+
+        // 3) Construye payload solo con columnas existentes
+        $data = ['cedula' => $ced];
+
+        foreach ($this->columns as $col) {
+            if (in_array($col, ['id', 'cedula', 'created_at', 'updated_at'], true)) {
+                continue;
+            }
+            if (!array_key_exists($col, $r)) {
+                continue;
+            }
+
+            $val = $r[$col];
+
+            // Convertir automáticamente cualquier campo que contenga "fecha"
+            if (stripos($col, 'fecha') !== false) {
+                $val = $this->toDate($val);
+            }
+
+            $data[$col] = $val;
+        }
+
         try {
-            DB::table('usuarios')->updateOrInsert(
-                ['cedula' => trim($row['cedula'])],
-                [
-                    'grado' => $row['grado'] ?? null,
-                    'apellidos_nombres' => $row['apellidos_nombres'] ?? null,
-                    'sexo' => $row['sexo'] ?? null,
-                    'tipo_personal' => $row['tipo_personal'] ?? null,
-                    'antiguedad' => $row['antiguedad'] ?? null,
-                    'estado_civil' => $row['estado_civil'] ?? null,
-                    'promocion' => $row['promocion'] ?? null,
-                    'cdg_promocion' => $row['cdg_promocion'] ?? null,
-                    'cuadro_policial' => $row['cuadro_policial'] ?? null,
-                    'fecha_ingreso' => $this->convertirFecha($row['fecha_ingreso'] ?? null),
-                    'domicilio' => $row['domicilio'] ?? null,
-                    'provincia_trabaja' => $row['provincia_trabaja'] ?? null,
-                    'provincia_vive' => $row['provincia_vive'] ?? null,
-                    'pase_ucp_ccp_cpl' => $row['pase_ucp_ccp_cpl'] ?? null,
-                    'capacitacion' => $row['capacitacion'] ?? null,
-                    'titulos' => $row['titulos'] ?? null,
-                    'titulos_senescyt' => $row['titulos_senescyt'] ?? null,
-                    'contrato_estudios' => $row['contrato_estudios'] ?? null,
-                    'conyuge_policia_activo' => $row['conyuge_policia_activo'] ?? null,
-                    'enf_catast_sp' => $row['enf_catast_sp'] ?? null,
-                    'enf_catast_conyuge_hijos' => $row['enf_catast_conyuge_hijos'] ?? null,
-                    'discapacidad_sp' => $row['discapacidad_sp'] ?? null,
-                    'discapacidad_conyuge_hijos' => $row['discapacidad_conyuge_hijos'] ?? null,
-                    'hijos_menor_igual_18' => $row['hijos_menor_igual_18'] ?? null,
-                    'alertas' => $row['alertas'] ?? null,
-                    'alerta_devengacion' => $row['alerta_devengacion'] ?? null,
-                    'alerta_devengacion_fecha' => $this->convertirFecha($row['alerta_devengacion_fecha'] ?? null),
-                    'alerta_devengacion_estado' => $row['alerta_devengacion_estado'] ?? null,
-                    'alerta_marco_legal' => $row['alerta_marco_legal'] ?? null,
-                    'alerta_marco_legal_fecha' => $this->convertirFecha($row['alerta_marco_legal_fecha'] ?? null),
-                    'alerta_marco_legal_estado' => $row['alerta_marco_legal_estado'] ?? null,
-                    'meritos' => $row['meritos'] ?? null,
-                    'num_demerito' => $row['num_demerito'] ?? null,
-                    'novedad_situacion' => $row['novedad_situacion'] ?? null,
-                    'observacion_tenencia' => $row['observacion_tenencia'] ?? null,
-                    'alertas_problemas_salud' => $row['alertas_problemas_salud'] ?? null,
-                    'FaseMaternidadUDGA' => $row['FaseMaternidadUDGA'] ?? null,
-                    'fase_maternidad' => $row['fase_maternidad'] ?? null,
-                    'fecha_final_maternidad' => $this->convertirFecha($row['fecha_final_maternidad'] ?? null),
-                    'historico_pases' => $row['historico_pases'] ?? null,
-                    'traslado_temporal' => $row['traslado_temporal'] ?? null,
-                    'traslado_eventual' => $row['traslado_eventual'] ?? null,
-                    'comisiones' => $row['comisiones'] ?? null,
-                    'fechaPresentacion' => $this->convertirFecha($row['fechapresentacion'] ?? null),
-                    'ultimo_pase' => $row['ultimo_pase'] ?? null,
-                    'funcion_origen' => $row['funcion_origen'] ?? null,
-                    'fecha_presentacion_traslado' => $this->convertirFecha($row['fecha_presentacion_traslado'] ?? null),
-                    'numeroDias' => $row['numerodias'] ?? null,
-                    'nomenclatura' => $row['nomenclatura'] ?? null,
-                    'funcion_tras' => $row['funcion_tras'] ?? null,
-                    'descripcion' => $row['descripcion'] ?? null,
-                    'pase_anterior' => $row['pase_anterior'] ?? null,
-                    'fecha_pase_anterior' => $this->convertirFecha($row['fecha_pase_anterior'] ?? null),
-                    'designaciones' => $row['designaciones'] ?? null,
-                    'maternidad' => $row['maternidad'] ?? null,
-                    'proyeccion_licencia' => $row['proyeccion_licencia'] ?? null,
-                    'dmq' => $row['dmq'] ?? null,
-                    'dmg' => $row['dmg'] ?? null,
-                    'azuay' => $row['azuay'] ?? null,
-                    'bolivar' => $row['bolivar'] ?? null,
-                    'canar' => $row['canar'] ?? null,
-                    'carchi' => $row['carchi'] ?? null,
-                    'cotopaxi' => $row['cotopaxi'] ?? null,
-                    'chimborazo' => $row['chimborazo'] ?? null,
-                    'el_oro' => $row['el_oro'] ?? null,
-                    'esmeraldas' => $row['esmeraldas'] ?? null,
-                    'guayas' => $row['guayas'] ?? null,
-                    'imbabura' => $row['imbabura'] ?? null,
-                    'loja' => $row['loja'] ?? null,
-                    'los_rios' => $row['los_rios'] ?? null,
-                    'manabi' => $row['manabi'] ?? null,
-                    'morona' => $row['morona'] ?? null,
-                    'napo' => $row['napo'] ?? null,
-                    'pastaza' => $row['pastaza'] ?? null,
-                    'pichincha' => $row['pichincha'] ?? null,
-                    'tungurahua' => $row['tungurahua'] ?? null,
-                    'zamora' => $row['zamora'] ?? null,
-                    'galapagos' => $row['galapagos'] ?? null,
-                    'sucumbios' => $row['sucumbios'] ?? null,
-                    'orellana' => $row['orellana'] ?? null,
-                    's_domingo' => $row['s_domingo'] ?? null,
-                    's_elena' => $row['s_elena'] ?? null,
-                    'exterior' => $row['exterior'] ?? null,
-                    'fecha_efectiva' => $this->convertirFecha($row['fecha_efectiva'] ?? null),
-                    'nomenclatura_efectiva' => $row['nomenclatura_efectiva'] ?? null,
-                    'funcion_efectiva' => $row['funcion_efectiva'] ?? null,
-                    'dias_efectivos' => $row['dias_efectivos'] ?? null,
-                    'estado_efectivo' => $row['estado_efectivo'] ?? null,
-                    'direccion_unidad_zona_policia' => $row['direccion_unidad_zona_policia'] ?? null,
-                    'sub_zona_policia' => $row['sub_zona_policia'] ?? null,
-                    'distrito' => $row['distrito'] ?? null,
-                    'circuito_departamento_seccion' => $row['circuito_departamento_seccion'] ?? null,
-                    'subcircuito' => $row['subcircuito'] ?? null,
-                    'funcion_asignada' => $row['funcion_asignada'] ?? null,
-                    'fecha_presentacion_nueva' => $this->convertirFecha($row['fecha_presentacion_nueva'] ?? null),
-                    'novedad' => $row['novedad'] ?? null,
-                    'dependencia_destino' => $row['dependencia_destino'] ?? null,
-                    'detalle_novedad_nueva_unidad' => $row['detalle_novedad_nueva_unidad'] ?? null,
-                    'fecha_novedad' => $this->convertirFecha($row['fecha_novedad'] ?? null),
-                    'tipo_documento' => $row['tipo_documento'] ?? null,
-                    'documento_referencia' => $row['documento_referencia'] ?? null,
-                    'numero_grupo_trabajo' => $row['numero_grupo_trabajo'] ?? null,
-                    'grupo' => $row['grupo'] ?? null,
-                    'modalidad' => $row['modalidad'] ?? null,
-                    'tipo_sangre' => $row['tipo_sangre'] ?? null,
-                    'licencia_conducir' => $row['licencia_conducir'] ?? null,
-                    'numero_celular' => $row['numero_celular'] ?? null,
-                    'numero_celular_familiar' => $row['numero_celular_familiar'] ?? null,
-                    'correo_electronico' => $row['correo_electronico'] ?? null,
-                    'alerta_contra' => $row['alerta_contra'] ?? null,
-                ]
-            );
-            Log::info("✔️ Importado: " . $row['cedula']);
-        } catch (\Exception $e) {
-            Log::error("❌ Error con " . $row['cedula'] . ": " . $e->getMessage());
+            DB::table('usuarios')->updateOrInsert(['cedula' => $ced], $data);
+            $this->ok++;
+            Log::info("✔️ Importado: {$ced}");
+        } catch (\Throwable $e) {
+            $this->errores[] = [
+                'fila'   => $this->filaActual,
+                'cedula' => $ced,
+                'motivo' => $e->getMessage(),
+            ];
+            Log::error("❌ Error con {$ced}: " . $e->getMessage());
         }
 
         return null;
+    }
+
+    /** Tamaño de chunk para archivos grandes */
+    public function chunkSize(): int
+    {
+        return 1000;
+    }
+
+    /** Inserciones por batch */
+    public function batchSize(): int
+    {
+        return 1000;
+    }
+
+    /** Resumen para consultar desde el controlador (opcional) */
+    public function resumen(): array
+    {
+        return [
+            'insertados_actualizados' => $this->ok,
+            'errores'                 => $this->errores,
+        ];
     }
 }

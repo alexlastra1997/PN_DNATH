@@ -5,17 +5,17 @@
     <section class="bg-white dark:bg-gray-900">
         <div class="grid lg:h-screen lg:grid-cols-2">
 
-            {{-- Columna Izquierda: Formulario --}}
+            {{-- Columna izquierda: formulario --}}
             <div class="flex justify-center items-center py-6 px-4 lg:py-0 sm:px-0">
                 <form method="POST" action="{{ route('register') }}"
-                      class="space-y-4 max-w-md md:space-y-6 xl:max-w-xl w-full bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                      class="space-y-4 max-w-md w-full bg-white dark:bg-gray-800 rounded-lg shadow p-6">
                     @csrf
 
                     <h2 class="text-xl font-bold text-gray-900 dark:text-white">Crea tu cuenta</h2>
 
                     {{-- Errores --}}
                     @if ($errors->any())
-                        <div class="text-red-500 text-sm">
+                        <div class="text-red-600 text-sm">
                             <ul class="list-disc list-inside">
                                 @foreach ($errors->all() as $error)
                                     <li>{{ $error }}</li>
@@ -28,93 +28,66 @@
                     <div>
                         <label for="name" class="block mb-2 text-sm font-medium text-gray-900 dark:text-gray-300">Nombre completo</label>
                         <input type="text" name="name" id="name" value="{{ old('name') }}" required
-                               class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg
-                                focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5
-                                dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white">
+                               class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5
+                        dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white">
                     </div>
 
                     {{-- Email --}}
                     <div>
                         <label for="email" class="block mb-2 text-sm font-medium text-gray-900 dark:text-gray-300">Correo electrónico</label>
                         <input type="email" name="email" id="email" value="{{ old('email') }}" required
-                               class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg
-                                focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5
-                                dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white">
+                               class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5
+                        dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white">
+                    </div>
+
+                    {{-- Rol --}}
+                    <div>
+                        <label for="role" class="block mb-2 text-sm font-medium text-gray-900 dark:text-gray-300">Rol</label>
+                        <select id="role" name="role" required
+                                class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg block w-full p-2.5
+                         dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                            <option value="" disabled {{ old('role') ? '' : 'selected' }}>Selecciona un rol</option>
+                            @foreach (($roles ?? []) as $r)
+                                <option value="{{ $r }}" {{ old('role') === $r ? 'selected' : '' }}>
+                                    {{ strtoupper($r) }}
+                                </option>
+                            @endforeach
+                        </select>
+                        @if (empty($roles))
+                            <p class="mt-1 text-xs text-amber-600">No existen roles en la base de datos. Corre el seeder primero.</p>
+                        @endif
                     </div>
 
                     {{-- Password --}}
                     <div>
                         <label for="password" class="block mb-2 text-sm font-medium text-gray-900 dark:text-gray-300">Contraseña</label>
                         <input type="password" name="password" id="password" required
-                               class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg
-                                focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5
-                                dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white">
+                               class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg block w-full p-2.5
+                        dark:bg-gray-700 dark:border-gray-600 dark:text-white">
                     </div>
 
-                    {{-- Confirmar Password --}}
+                    {{-- Confirmación --}}
                     <div>
                         <label for="password_confirmation" class="block mb-2 text-sm font-medium text-gray-900 dark:text-gray-300">Confirmar contraseña</label>
                         <input type="password" name="password_confirmation" id="password_confirmation" required
-                               class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg
-                                focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5
-                                dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white">
+                               class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg block w-full p-2.5
+                        dark:bg-gray-700 dark:border-gray-600 dark:text-white">
                     </div>
 
-                    {{-- Terminos --}}
-                    <div class="flex items-start">
-                        <div class="flex items-center h-5">
-                            <input id="terms" name="terms" type="checkbox" required
-                                   class="w-4 h-4 bg-gray-50 border border-gray-300 rounded
-                                    focus:ring-3 focus:ring-blue-300 dark:bg-gray-700 dark:border-gray-600 dark:focus:ring-blue-600">
-                        </div>
-                        <div class="ml-3 text-sm">
-                            <label for="terms" class="font-light text-gray-500 dark:text-gray-300">
-                                Al registrarte, aceptas nuestros
-                                <a href="#" class="font-medium text-blue-600 hover:underline dark:text-blue-400">Términos de uso</a>
-                                y
-                                <a href="#" class="font-medium text-blue-600 hover:underline dark:text-blue-400">Política de privacidad</a>.
-                            </label>
-                        </div>
-                    </div>
-
-                    {{-- Botón --}}
                     <button type="submit"
-                            class="w-full text-white bg-blue-600 hover:bg-blue-700 focus:ring-4 focus:outline-none
-                             focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center
-                             dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800">
-                        Crear cuenta
+                            class="w-full inline-flex justify-center items-center px-4 py-2 rounded-lg border
+                       bg-blue-600 text-white hover:bg-blue-700 focus:ring-4 focus:ring-blue-300">
+                        Registrarme
                     </button>
 
-                    {{-- Link a Login --}}
-                    <p class="text-sm font-light text-gray-500 dark:text-gray-300">
-                        ¿Ya tienes una cuenta?
-                        <a href="{{ route('login') }}" class="font-medium text-blue-600 hover:underline dark:text-blue-400">Inicia sesión</a>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">
+                        Al registrarte aceptas nuestros Términos y Política de privacidad.
                     </p>
                 </form>
             </div>
 
-            {{-- Columna Derecha: Panel de marca --}}
-            <div class="flex justify-center items-center py-6 px-4 bg-blue-600 lg:py-0 sm:px-0">
-                <div class="max-w-md xl:max-w-xl">
-                    <a href="#" class="flex items-center mb-4 text-2xl font-semibold text-white">
-                        <img class="w-8 h-8 mr-2" src="{{ asset('images/dnath.png') }}" alt="logo">
-                        DNATH
-                    </a>
-                    <h1 class="mb-4 text-3xl font-extrabold tracking-tight leading-none text-white xl:text-5xl">Explora el orgánico institucional</h1>
-                    <p class="mb-4 font-light text-blue-100 lg:mb-8">Centraliza registros, traslados y vacantes con paneles dinámicos y filtros en tiempo real.</p>
-                    <div class="flex items-center divide-x divide-blue-400">
-                        <div class="flex pr-3 -space-x-4 sm:pr-5">
-                            <img class="w-10 h-10 border-2 border-white rounded-full" src="https://flowbite.s3.amazonaws.com/blocks/marketing-ui/avatars/bonnie-green.png" alt="">
-                            <img class="w-10 h-10 border-2 border-white rounded-full" src="https://flowbite.s3.amazonaws.com/blocks/marketing-ui/avatars/jese-leos.png" alt="">
-                            <img class="w-10 h-10 border-2 border-white rounded-full" src="https://flowbite.s3.amazonaws.com/blocks/marketing-ui/avatars/roberta-casas.png" alt="">
-                            <img class="w-10 h-10 border-2 border-white rounded-full" src="https://flowbite.s3.amazonaws.com/blocks/marketing-ui/avatars/thomas-lean.png" alt="">
-                        </div>
-                        <span class="pl-3 text-sm text-blue-100 sm:pl-5">
-                      Más de <span class="font-medium text-white">15.7k</span> usuarios satisfechos
-                  </span>
-                    </div>
-                </div>
-            </div>
+            {{-- Columna derecha decorativa --}}
+            <div class="hidden lg:block bg-gray-50 dark:bg-gray-900"></div>
         </div>
     </section>
 @endsection

@@ -15,7 +15,7 @@ return new class extends Migration
 {
     Schema::create('usuarios', function (Blueprint $table) {
             $table->id();
-            
+
         $table->string('cedula')->nullable();
         $table->string('grado')->nullable();
         $table->string('apellidos_nombres')->nullable();
@@ -28,6 +28,7 @@ return new class extends Migration
         $table->string('cuadro_policial')->nullable();
         $table->string('fecha_ingreso')->nullable();
         $table->text('domicilio')->nullable();
+        $table->string('Telefono')->nullable();
         $table->string('provincia_trabaja')->nullable();
         $table->string('provincia_vive')->nullable();
         $table->string('pase_ucp_ccp_cpl')->nullable();
@@ -42,10 +43,10 @@ return new class extends Migration
         $table->string('discapacidad_conyuge_hijos')->nullable();
         $table->string('hijos_menor_igual_18')->nullable(); // equivale a `HIJOS<=18`
         $table->text('alertas')->nullable();
-        $table->string('alerta_devengacion')->nullable();
+        $table->text('alerta_devengacion')->nullable();
         $table->string('alerta_devengacion_fecha')->nullable();
         $table->string('alerta_devengacion_estado')->nullable();
-        $table->string('alerta_marco_legal')->nullable();
+        $table->text('alerta_marco_legal')->nullable();
         $table->string('alerta_marco_legal_fecha')->nullable();
         $table->string('alerta_marco_legal_estado')->nullable();
         $table->text('meritos')->nullable();
@@ -99,7 +100,7 @@ return new class extends Migration
         $table->integer('orellana')->nullable();
         $table->integer('s_domingo')->nullable();
         $table->integer('s_elena')->nullable();
-        $table->integer('exterior')->nullable();				
+        $table->integer('exterior')->nullable();
         $table->string('fecha_efectiva')->nullable();
         $table->string('nomenclatura_efectiva')->nullable();
         $table->string('funcion_efectiva')->nullable();
