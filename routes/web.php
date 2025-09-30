@@ -22,6 +22,9 @@ use App\Http\Controllers\GenerarPasesController;
 use App\Http\Controllers\ComparadorExcelController;
 use App\Http\Controllers\NumericosNomenclaturaEfectivaController;
 use App\Http\Controllers\MapaNdescController;
+use App\Http\Controllers\OrganicoStatusController;
+
+
 
 
 
@@ -177,10 +180,15 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/mapa-ndesc', [MapaNdescController::class, 'index'])->name('mapa.ndesc');
 
-// zona: 1..9  | subzonaSlug: slug de la subzona (ESMERALDAS -> esmeraldas)
+    // zona: 1..9  | subzonaSlug: slug de la subzona (ESMERALDAS -> esmeraldas)
     Route::get('/mapa-ndesc/z{zona}/sz/{subzonaSlug}', [MapaNdescController::class, 'show'])->name('ndesc.subzona.show');
     // Exportar a Excel (una hoja por tab)
     Route::get('/mapa-ndesc/{zona}/{subzona}/export', [MapaNdescController::class, 'export'])->name('mapa.ndesc.export');
+
+    Route::get('/mapa-direc', [OrganicoStatusController::class, 'index'])->name('mapa_direc.index');
+    Route::get('/mapa-direc/raiz/{raiz}', [OrganicoStatusController::class, 'raiz'])->name('mapa_direc.raiz'); // NUEVA
+    Route::get('/mapa-direc/{id}', [OrganicoStatusController::class, 'show'])->name('mapa_direc.show'); // opcional
+
 
 });
 
