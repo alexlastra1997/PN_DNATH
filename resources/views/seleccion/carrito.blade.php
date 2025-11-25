@@ -8,7 +8,7 @@
                 <div class="flex gap-2">
                     {{-- Botones header --}}
                     <div class="flex gap-2">
-                        <a href="{{ route('usuarios.resultados') }}"
+                        <a href="{{ route('seleccion.resultados') }}"
                            class="px-3 py-2 rounded-md bg-primary-700 text-white text-sm hover:bg-primary-800">Volver a resultados</a>
 
                         {{-- Abrir modal de informe --}}
@@ -30,7 +30,7 @@
                             </div>
 
                             {{-- Enviamos por GET a la ruta del PDF y abrimos en nueva pestaña para descargar --}}
-                            <form action="{{ route('usuarios.informe.pdf') }}" method="GET" target="_blank" class="px-5 py-4 space-y-4">
+                            <form action="{{ route('seleccion.informe.pdf') }}" method="GET" target="_blank" class="px-5 py-4 space-y-4">
                                 @csrf
                                 <div>
                                     <label class="block text-xs font-medium mb-1 text-gray-700 dark:text-gray-300">
@@ -264,10 +264,11 @@
     </section>
 
     {{-- JS eliminación --}}
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            const CSRF = (document.querySelector('meta[name="csrf-token"]') || {}).content || "{{ csrf_token() }}";
-            const URL  = "{{ route('usuarios.carrito.eliminar') }}";
+            const CSRF = (document.querySelector('meta[name="csrf-token"]') || {}).content;
+            const URL  = "{{ route('seleccion.carrito.eliminar') }}";
 
             function updateEmptyState(tbodyId, emptyClass, countId) {
                 const tbody = document.getElementById(tbodyId);

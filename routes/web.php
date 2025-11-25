@@ -23,6 +23,10 @@ use App\Http\Controllers\ComparadorExcelController;
 use App\Http\Controllers\NumericosNomenclaturaEfectivaController;
 use App\Http\Controllers\MapaNdescController;
 use App\Http\Controllers\OrganicoStatusController;
+use App\Http\Controllers\MapaMundiController;
+use App\Http\Controllers\AggregadosPolicialesController;
+use App\Http\Controllers\SeleccionUsuariosController;
+
 
 
 
@@ -52,34 +56,40 @@ Route::middleware('auth')->group(function () {
     Route::get('/usuarios/factibilidad', [UsuarioController::class, 'factibilidad'])->name('usuarios.factibilidad');
     Route::get('/usuarios/factibilidad/pdf', [UsuarioController::class, 'exportarFactibilidadPdf'])->name('usuarios.factibilidad.pdf');
 
-    // Opciones (cargar Excel)
-    Route::get('/usuarios/opciones', [UsuarioController::class, 'opciones'])
-        ->name('usuarios.opciones');
-    Route::post('/usuarios/masivo', [UsuarioController::class, 'masivo'])
-        ->name('usuarios.masivo');
+    // =================== RUTAS NUEVAS ===================
+    Route::prefix('seleccion')->name('seleccion.')->group(function () {
+        // Opciones (cargar Excel)
+        Route::get('/opciones', [SeleccionUsuariosController::class, 'opciones'])->name('opciones');
+        Route::post('/masivo',   [SeleccionUsuariosController::class, 'masivo'])->name('masivo');
 
-// Resultados
-    Route::get('/usuarios/resultados', [UsuarioController::class, 'resultado'])
-        ->name('usuarios.resultados');
-// alias opcional
-    Route::get('/usuarios/resultado', [UsuarioController::class, 'resultado'])
-        ->name('usuarios.resultado');
+        // Resultados
+        Route::get('/resultados', [SeleccionUsuariosController::class, 'resultado'])->name('resultados');
+        Route::get('/resultado',  [SeleccionUsuariosController::class, 'resultado'])->name('resultado');
 
+        // Calificar / Carrito
+        Route::post('/calificar',        [SeleccionUsuariosController::class, 'calificar'])->name('calificar');
+        Route::get('/carrito',           [SeleccionUsuariosController::class, 'carrito'])->name('carrito');
+        Route::post('/carrito/eliminar', [SeleccionUsuariosController::class, 'carritoEliminar'])->name('carrito.eliminar');
 
-    Route::post('/usuarios/calificar', [UsuarioController::class, 'calificar'])->name('usuarios.calificar');
-    Route::get('/usuarios/carrito', [UsuarioController::class, 'carrito'])->name('usuarios.carrito');
-    Route::post('/usuarios/carrito/eliminar', [UsuarioController::class, 'carritoEliminar'])
-        ->name('usuarios.carrito.eliminar');
+        // Informe PDF
+        Route::get('/informe.pdf', [SeleccionUsuariosController::class, 'informePdf'])->name('informe.pdf');
 
-    Route::get(
-        '/reporte-organico/exportar-resumen-xlsx',
-        [ReporteOrganicoVisualController::class, 'exportResumenXlsx']
-    )->name('reporte_organico.exportar_resumen_xlsx');
+        // Para evitar error si alguien entra GET a /seleccion/masivo
+        Route::get('/masivo', fn() => redirect()->route('seleccion.opciones'));
+    });
 
+// ================ COMPATIBILIDAD (recomendado) =================
+// Sin 302 que convierta a GET: llamamos mismo método directamente
+    Route::post('/usuarios/masivo', [SeleccionUsuariosController::class, 'masivo'])->name('usuarios.masivo');
+    Route::post('/usuarios/calificar', [SeleccionUsuariosController::class, 'calificar'])->name('usuarios.calificar');
+    Route::post('/usuarios/carrito/eliminar', [SeleccionUsuariosController::class, 'carritoEliminar'])->name('usuarios.carrito.eliminar');
 
-    Route::get('/usuarios/informe.pdf', [UsuarioController::class, 'informePdf'])
-        ->name('usuarios.informe.pdf');
-
+// GETs viejos redirigen (estos sí pueden ser redirect 302)
+    Route::get('/usuarios/opciones',   fn() => redirect()->route('seleccion.opciones'))->name('usuarios.opciones');
+    Route::get('/usuarios/resultados', fn() => redirect()->route('seleccion.resultados'))->name('usuarios.resultados');
+    Route::get('/usuarios/resultado',  fn() => redirect()->route('seleccion.resultado'))->name('usuarios.resultado');
+    Route::get('/usuarios/carrito',    fn() => redirect()->route('seleccion.carrito'))->name('usuarios.carrito');
+    Route::get('/usuarios/informe.pdf',fn() => redirect()->route('seleccion.informe.pdf'))->name('usuarios.informe.pdf');
 
     Route::delete('/usuarios/seleccionados/{id}', [UsuarioController::class, 'eliminarSeleccionado'])->name('usuarios.eliminarSeleccionado');
     Route::get('/usuarios/{usuario}', [UsuarioController::class, 'show'])->name('usuarios.show');
@@ -163,6 +173,12 @@ Route::middleware('auth')->group(function () {
     Route::get('reporte_organico/exportar-excel', [ReporteOrganicoVisualController::class, 'exportarExcel'])
         ->name('reporte_organico.exportar_excel');
 
+    Route::get(
+        '/reporte-organico/exportar-resumen-xlsx',
+        [ReporteOrganicoVisualController::class, 'exportResumenXlsx']
+    )->name('reporte_organico.exportar_resumen_xlsx');
+
+
 
     Route::get('/generar-pases', [GenerarPasesController::class, 'index'])
         ->name('generar_pases.index');
@@ -173,7 +189,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/comparador-excel/exportar', [ComparadorExcelController::class, 'exportar'])->name('comparador.exportar');
 
     Route::get('/numericos/nomenclatura-efectiva', [NumericosNomenclaturaEfectivaController::class, 'index'])
-        ->name('numericos.nomenclatura_efectiva');
+        ->name('numericos.nomenclatura_efectiva.index');
 
     Route::get('/numericos/nomenclatura-efectiva/export', [NumericosNomenclaturaEfectivaController::class, 'export'])
         ->name('numericos.nomenclatura_efectiva.export');
@@ -189,6 +205,11 @@ Route::middleware('auth')->group(function () {
     Route::get('/mapa-direc/raiz/{raiz}', [OrganicoStatusController::class, 'raiz'])->name('mapa_direc.raiz'); // NUEVA
     Route::get('/mapa-direc/{id}', [OrganicoStatusController::class, 'show'])->name('mapa_direc.show'); // opcional
 
+    Route::get('/mapa-mundi', [MapaMundiController::class, 'index'])->name('mapa.mundi');
 
+    Route::get('/agregados-policiales', [AggregadosPolicialesController::class, 'index'])
+        ->name('agregados.policiales');
+
+    Route::view('/panel-exterior', 'cards_exterior')->name('panel.exterior');
 });
 

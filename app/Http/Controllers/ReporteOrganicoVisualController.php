@@ -301,8 +301,14 @@ class ReporteOrganicoVisualController extends Controller
         ]);
     }
 
+    // app/Http/Controllers/ReporteOrganicoVisualController.php
+
+    // app/Http/Controllers/ReporteOrganicoVisualController.php
+
     public function exportarExcel(Request $request)
     {
+        DB::statement("SET SESSION group_concat_max_len = 1000000");
+
         // ====== Subqueries base (idénticas al index) ======
         $roQuery = DB::table('reporte_organico as ro')
             ->selectRaw('ro.servicio_organico')
@@ -313,22 +319,22 @@ class ReporteOrganicoVisualController extends Controller
             ->selectRaw('ro.subsistema')
             ->selectRaw('UPPER(TRIM(ro.nomenclatura_organico)) as ro_nom_norm')
             ->selectRaw("CONCAT(SUBSTRING_INDEX(UPPER(TRIM(ro.nomenclatura_organico)),'-',5),'-') as ro_base_nom")
-            ->selectRaw('UPPER(TRIM(ro.cargo_organico)) as ro_cargo_norm'); //
+            ->selectRaw('UPPER(TRIM(ro.cargo_organico)) as ro_cargo_norm');
 
         $uExactQuery = DB::table('usuarios as u')
             ->selectRaw("UPPER(TRIM(u.funcion_efectiva)) as cargo_norm")
             ->selectRaw("UPPER(TRIM(u.nomenclatura_efectiva)) as nom_norm")
             ->selectRaw('COUNT(*) as cnt')
-            ->groupBy('cargo_norm','nom_norm'); //
+            ->groupBy('cargo_norm','nom_norm');
 
         $uLeftQuery = DB::table('usuarios as u')
             ->selectRaw("UPPER(TRIM(u.funcion_efectiva)) as cargo_norm")
             ->selectRaw("UPPER(TRIM(u.nomenclatura_efectiva)) as nom_norm")
-            ->selectRaw("CONCAT(SUBSTRING_INDEX(UPPER(TRIM(u.nomenclatura_efectiva)),'-',5),'-') as base_nom"); //
+            ->selectRaw("CONCAT(SUBSTRING_INDEX(UPPER(TRIM(u.nomenclatura_efectiva)),'-',5),'-') as base_nom");
 
         $roDistinctQuery = DB::table('reporte_organico as ro')
             ->selectRaw("UPPER(TRIM(ro.cargo_organico)) as cargo_norm, UPPER(TRIM(ro.nomenclatura_organico)) as nom_norm")
-            ->distinct(); //
+            ->distinct();
 
         $uInheritedQuery = DB::query()->fromSub($uLeftQuery, 'ul')
             ->leftJoinSub($roDistinctQuery, 'rod', function ($j) {
@@ -337,8 +343,69 @@ class ReporteOrganicoVisualController extends Controller
             })
             ->whereNull('rod.nom_norm')
             ->selectRaw('ul.cargo_norm, ul.base_nom, COUNT(*) as cnt')
-            ->groupBy('ul.cargo_norm','ul.base_nom'); //
+            ->groupBy('ul.cargo_norm','ul.base_nom');
 
+        // ====== Ocupantes con CÉDULA en JSON (compatible: GROUP_CONCAT + JSON_OBJECT) ======
+        // EXACTOS
+        $occExactQuery = DB::table('usuarios as u')
+            ->selectRaw("UPPER(TRIM(u.funcion_efectiva)) as cargo_norm")
+            ->selectRaw("UPPER(TRIM(u.nomenclatura_efectiva)) as nom_norm")
+            ->selectRaw("
+            CONCAT(
+                '[',
+                GROUP_CONCAT(
+                    DISTINCT JSON_OBJECT(
+                        'g', COALESCE(u.grado,''),
+                        'n', COALESCE(u.apellidos_nombres,''),
+                        'p', COALESCE(u.cdg_promocion,''),
+                        'c', COALESCE(u.cedula,'')
+                    )
+                    ORDER BY u.grado, u.apellidos_nombres
+                    SEPARATOR ','
+                ),
+                ']'
+            ) as occ_exact_json
+        ")
+            ->whereNotNull('u.funcion_efectiva')
+            ->whereNotNull('u.nomenclatura_efectiva')
+            ->groupBy('cargo_norm','nom_norm');
+
+        // BASE (heredados)
+        $uLeftForOcc = DB::table('usuarios as u')
+            ->selectRaw("UPPER(TRIM(u.funcion_efectiva)) as cargo_norm")
+            ->selectRaw("UPPER(TRIM(u.nomenclatura_efectiva)) as nom_norm")
+            ->selectRaw("CONCAT(SUBSTRING_INDEX(UPPER(TRIM(u.nomenclatura_efectiva)),'-',5),'-') as base_nom")
+            ->selectRaw("u.grado, u.apellidos_nombres, u.cdg_promocion, u.cedula");
+
+        $occBaseRaw = DB::query()->fromSub($uLeftForOcc, 'ul')
+            ->leftJoinSub($roDistinctQuery, 'rod', function ($j) {
+                $j->on('rod.cargo_norm','=','ul.cargo_norm')
+                    ->on('rod.nom_norm'  ,'=','ul.nom_norm');
+            })
+            ->whereNull('rod.nom_norm')
+            ->selectRaw('ul.cargo_norm, ul.base_nom, ul.grado, ul.apellidos_nombres, ul.cdg_promocion, ul.cedula');
+
+        $occBaseQuery = DB::query()->fromSub($occBaseRaw, 't')
+            ->selectRaw('t.cargo_norm, t.base_nom')
+            ->selectRaw("
+            CONCAT(
+                '[',
+                GROUP_CONCAT(
+                    DISTINCT JSON_OBJECT(
+                        'g', COALESCE(t.grado,''),
+                        'n', COALESCE(t.apellidos_nombres,''),
+                        'p', COALESCE(t.cdg_promocion,''),
+                        'c', COALESCE(t.cedula,'')
+                    )
+                    ORDER BY t.grado, t.apellidos_nombres
+                    SEPARATOR ','
+                ),
+                ']'
+            ) as occ_base_json
+        ")
+            ->groupBy('t.cargo_norm','t.base_nom');
+
+        // ====== Base del export con JOINs ======
         $q = DB::query()
             ->fromSub($roQuery, 'rb')
             ->leftJoinSub($uExactQuery, 'ue', function ($j) {
@@ -348,9 +415,17 @@ class ReporteOrganicoVisualController extends Controller
             ->leftJoinSub($uInheritedQuery, 'ui', function ($j) {
                 $j->on('ui.cargo_norm','=','rb.ro_cargo_norm')
                     ->on('ui.base_nom'  ,'=','rb.ro_base_nom');
-            }); //
+            })
+            ->leftJoinSub($occExactQuery, 'oce', function ($j) {
+                $j->on('oce.cargo_norm','=','rb.ro_cargo_norm')
+                    ->on('oce.nom_norm'  ,'=','rb.ro_nom_norm');
+            })
+            ->leftJoinSub($occBaseQuery, 'ocb', function ($j) {
+                $j->on('ocb.cargo_norm','=','rb.ro_cargo_norm')
+                    ->on('ocb.base_nom'  ,'=','rb.ro_base_nom');
+            });
 
-        // ====== Aplicar los mismos filtros que en index (normalizados) ======
+        // ====== Filtros ======
         $normArr = fn(array $arr) => array_values(array_filter(array_map(
             fn($v)=>mb_strtoupper(trim((string)$v)), (array)$arr
         ), fn($v)=>$v!==''));
@@ -373,7 +448,7 @@ class ReporteOrganicoVisualController extends Controller
                     $pattern = '(^|,)[[:space:]]*'.preg_quote($g,'/').'([[:space:]]*,|$)';
                     $w->orWhereRaw("UPPER(rb.grado_organico) REGEXP ?", [$pattern]);
                 }
-            }); //
+            });
         }
 
         $estados = array_values(array_filter((array)$request->input('estado', []),
@@ -382,14 +457,14 @@ class ReporteOrganicoVisualController extends Controller
         if ($estados) {
             $q->where(function($w) use ($estados,$efectivoExpr){
                 foreach ($estados as $estado) {
-                    if ($estado==='VACANTE')  $w->orWhereRaw("$efectivoExpr <  rb.numero_organico_ideal");
-                    if ($estado==='COMPLETO') $w->orWhereRaw("$efectivoExpr =  rb.numero_organico_ideal");
-                    if ($estado==='EXCEDIDO') $w->orWhereRaw("$efectivoExpr >  rb.numero_organico_ideal");
+                    if     ($estado==='VACANTE')  $w->orWhereRaw("$efectivoExpr <  rb.numero_organico_ideal");
+                    elseif ($estado==='COMPLETO') $w->orWhereRaw("$efectivoExpr =  rb.numero_organico_ideal");
+                    elseif ($estado==='EXCEDIDO') $w->orWhereRaw("$efectivoExpr >  rb.numero_organico_ideal");
                 }
-            }); //
+            });
         }
 
-        // ====== Selección de columnas para export ======
+        // ====== Selección final ======
         $rows = $q->cloneWithoutBindings(['select','orders'])
             ->selectRaw('rb.servicio_organico as Servicio')
             ->selectRaw('rb.nomenclatura_organico as Nomenclatura')
@@ -397,14 +472,21 @@ class ReporteOrganicoVisualController extends Controller
             ->selectRaw('rb.subsistema as Subsistema')
             ->selectRaw('rb.numero_organico_ideal as Aprobado')
             ->selectRaw("$efectivoExpr as Efectivo")
+            ->selectRaw('CASE WHEN rb.ro_nom_norm = rb.ro_base_nom THEN 1 ELSE 0 END as EsCabecera')
+            ->selectRaw('oce.occ_exact_json as OcupantesExactJSON')
+            ->selectRaw('ocb.occ_base_json  as OcupantesBaseJSON')
             ->orderBy('rb.servicio_organico')
             ->orderBy('rb.nomenclatura_organico')
             ->orderBy('rb.cargo_organico')
             ->get();
 
-        // Usa tu export existente (ajusta el constructor si tu clase espera otra cosa)
         $filename = 'reporte_organico_'.now()->format('Ymd_His').'.xlsx';
         return Excel::download(new \App\Exports\ReporteOrganicoExport($rows), $filename);
     }
+
+
+
+
+
 
 }
