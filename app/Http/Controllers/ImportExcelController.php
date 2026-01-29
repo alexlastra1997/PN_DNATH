@@ -43,10 +43,39 @@ class ImportExcelController extends Controller
     }
 
     // --- Opcionales, si ya los usas en tu app ---
-
-    public function showContra()
+    public function showContra(Request $request)
     {
-        return view('contra');
+        // 🔎 Buscador backend (SQL) para rendimiento
+        $q = trim((string) $request->get('q', ''));
+
+        $alertasQuery = DB::table('usuarios')
+            ->select('cedula', 'apellidos_nombres', 'grado', 'alerta_contra')
+            ->whereNotNull('alerta_contra')
+            ->where('alerta_contra', '!=', '')
+            ->where('alerta_contra', '!=', '⚠️');
+
+        if ($q !== '') {
+            $alertasQuery->where(function ($w) use ($q) {
+                $w->where('cedula', 'like', "%{$q}%")
+                    ->orWhere('apellidos_nombres', 'like', "%{$q}%")
+                    ->orWhere('grado', 'like', "%{$q}%")
+                    ->orWhere('alerta_contra', 'like', "%{$q}%");
+            });
+        }
+
+        $alertas = $alertasQuery
+            ->orderBy('grado')
+            ->orderBy('apellidos_nombres')
+            ->paginate(20)
+            ->appends(['q' => $q]);
+
+        $totalAlertas = DB::table('usuarios')
+            ->whereNotNull('alerta_contra')
+            ->where('alerta_contra', '!=', '')
+            ->where('alerta_contra', '!=', '⚠️')
+            ->count();
+
+        return view('contra', compact('alertas', 'q', 'totalAlertas'));
     }
 
     public function importContra(Request $request)
@@ -55,41 +84,51 @@ class ImportExcelController extends Controller
             'file' => 'required|file|mimes:xlsx,xls',
         ]);
 
+        ini_set('max_execution_time', 0);
+        ini_set('memory_limit', '-1');
+
         $collection = Excel::toCollection(null, $request->file('file'))->first();
 
-        $cedulas = $collection->pluck(0)->map(function ($cedula) {
-            return str_pad(trim($cedula), 10, '0', STR_PAD_LEFT);
-        })->toArray();
+        $cedulas = $collection->pluck(0)
+            ->filter()
+            ->map(function ($cedula) {
+                $cedula = trim((string) $cedula);
+                return str_pad($cedula, 10, '0', STR_PAD_LEFT);
+            })
+            ->unique()
+            ->values()
+            ->toArray();
 
-        // ✅ SOLO actualiza si no hay texto en alerta_contra
-        foreach ($cedulas as $cedula) {
-            DB::table('usuarios')
-                ->where('cedula', $cedula)
-                ->whereNull('alerta_contra')
-                ->update(['alerta_contra' => '⚠️']);
-        }
-
-        $usuarios = DB::table('usuarios')
+        // Marca ⚠️ solo si está vacío
+        DB::table('usuarios')
             ->whereIn('cedula', $cedulas)
-            ->get();
+            ->where(function ($q) {
+                $q->whereNull('alerta_contra')
+                    ->orWhere('alerta_contra', '');
+            })
+            ->update(['alerta_contra' => '⚠️']);
 
-        return redirect()->route('contra.view')->with('usuarios', $usuarios);
+        return redirect()
+            ->route('contra.view')
+            ->with('success', '✅ Cédulas importadas y marcadas correctamente (solo donde estaba vacío).');
     }
 
     public function guardarNovedad(Request $request)
     {
         $request->validate([
-            'cedulas' => 'required',
+            'cedula' => 'required|string',
             'novedad' => 'nullable|string|max:1000',
         ]);
 
-        $cedulas = explode(',', $request->cedulas);
+        $cedula = str_pad(trim($request->cedula), 10, '0', STR_PAD_LEFT);
         $novedad = $request->novedad;
 
-        DB::table('usuarios')
-            ->whereIn('cedula', $cedulas)
-            ->update(['alerta_contra' => $novedad]);
+        $nuevoValor = (is_null($novedad) || trim($novedad) === '') ? null : $novedad;
 
-        return redirect()->route('contra.view')->with('success', '¡Novedad guardada con éxito!');
+        DB::table('usuarios')
+            ->where('cedula', $cedula)
+            ->update(['alerta_contra' => $nuevoValor]);
+
+        return redirect()->route('contra.view')->with('success', '✅ Alerta actualizada correctamente.');
     }
 }
